@@ -1,0 +1,21 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+.env/
+
+# PyCharm
+.idea/
+
+# Test coverage
+htmlcov/
+.coverage
+coverage.xml
+
+# Distribution
+dist/
+build/
+*.egg-info/
