@@ -15,12 +15,12 @@ This program allows users to use MINE to train a flexible convolutional neural n
 <br>*Lab Website:* https://www.thermofish.org/
 
 All code is licensed under the MIT license. See LICENSE for details.
-<br>© Martin Haesemeyer, Kaarthik A Balakrishnan and Jamie D Costabile, 2020-2023
+<br>© Martin Haesemeyer, Jamie D Costabile, Kaarthik A Balakrishnan, and Danica Matovic 2020-2025
 <br> Questions may be directed to haesemeyer.1@osu.edu
 
 # Quick Start
 
-[1] Create an environment with using Python v3.9
+[1] Create an environment using Python v3.9
 
 ```bash
 conda create -n mine python=3.9
