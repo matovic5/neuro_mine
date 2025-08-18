@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "neuro_mine"
+version = "0.2.8"
+description = "Identifies the contribution of behavioural and stimulus parameters to nerual activity"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Danica Matovic", email = "matovic.5@osu.edu"},
+    {name = "Martin Haesemeyer", email = "haesemeyer.1@osu.edu"}
+]
+dependencies = [
+    "h5py",
+    "matplotlib",
+    "numba",
+    "numpy",
+    "pandas",
+    "PyQt5",
+    "scipy",
+    "tensorflow<=2.15.1",
+    "upsetplot"
+]
+
+[project.urls]
+Homepage = "https://github.com/matovic5/neuro_mine"
+
+[project.scripts]
+Mine = "neuro_mine.main:main"
