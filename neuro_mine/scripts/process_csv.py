@@ -1,3 +1,5 @@
+from importlib.resources import open_text
+
 import pandas as pd
 import numpy as np
 from mine import Mine
@@ -9,11 +11,34 @@ from os import path
 from PyQt5.QtWidgets import QFileDialog, QApplication
 import upsetplot as ups
 import matplotlib.pyplot as pl
+import json
+from datetime import datetime
 
 
 class MineException(Exception):
     def __init__(self, message):
         super().__init__(message)
+
+
+class ConfigException(Exception):
+    def __init__(self, message):
+        super().__init__(message)
+
+
+default_options = {
+    "use_time": False,
+    "run_shuffle": False,
+    "th_corr": np.sqrt(0.5),
+    "taylor_sig": 0.05,
+    "taylor_cut": 0.1,
+    "th_lax": 0.8,
+    "th_sqr": 0.5,
+    "history": 10.0,
+    "taylor_look": 0.5,
+    "jacobian": False,
+    "n_epochs": 100,
+    "miner_verbose": True
+}
 
 
 if __name__ == '__main__':
@@ -34,23 +59,26 @@ if __name__ == '__main__':
                           action='store_true')
     a_parser.add_argument("-ct", "--th_corr", help="The test correlation threshold to "
                                                    "decide that fit was successful.",
-                          type=float, default=np.sqrt(0.5))
+                          type=float, default=default_options['th_corr'])
     a_parser.add_argument("-ts", "--taylor_sig", help="The significance threshold for taylor expansion.",
-                          type=float, default=0.05)
+                          type=float, default=default_options['taylor_sig'])
     a_parser.add_argument("-tc", "--taylor_cut", help="The variance fraction that has to be lost to"
                                                       "consider component important for fit.",
-                          type=float, default=0.1)
+                          type=float, default=default_options['taylor_cut'])
     a_parser.add_argument("-la", "--th_lax", help="The threshold of variance explained by the linear"
                                                       "approximation to consider the fit linear.",
-                          type=float, default=0.8)
+                          type=float, default=default_options['th_lax'])
     a_parser.add_argument("-lsq", "--th_sqr", help="The threshold of variance explained by the 2nd order"
                                                   "approximation to consider the fit 2nd order.",
-                          type=float, default=0.5)
+                          type=float, default=default_options['th_sqr'])
     a_parser.add_argument("-n", "--model_name", help="Name of model for file saving purposes.", type=str)
     a_parser.add_argument("-mh", "--history", help="The length of model history in time units.",
-                          type=float, default=10.0)
+                          type=float, default=default_options['history'])
     a_parser.add_argument("-tl", "--taylor_look", help="Determines taylor look ahead as multiplier of history",
-                          type=float, default=0.5)
+                          type=float, default=default_options['taylor_look'])
+    a_parser.add_argument("-j", "--jacobian", help="Store the Jacobians (linear receptive fields) for each neuron.",
+                          action='store_true')
+    a_parser.add_argument("-o", "--config", help="Path to config file with run parameters.", type=str)
 
     args = a_parser.parse_args()
 
@@ -59,30 +87,82 @@ if __name__ == '__main__':
         resp_path = QFileDialog.getOpenFileName(filter="CSV (*.csv)", caption="Select response file",
                                                 options=QFileDialog.DontUseNativeDialog)[0]
         if resp_path == "":
-            app.exit(0)
+            app.quit()
+            del app
             raise MineException("No response file selected")
     pred_path = args.predictors
     if pred_path is None:
         pred_path = QFileDialog.getOpenFileName(filter="CSV (*.csv)", caption="Select predictor file",
                                                 options=QFileDialog.DontUseNativeDialog)[0]
         if pred_path == "":
-            app.exit(0)
+            app.quit()
+            del app
             raise MineException("No predictor file selected")
-    time_as_pred = args.use_time
-    run_shuffle = args.run_shuffle
-    test_corr_thresh = args.th_corr
-    taylor_sig = args.taylor_sig
-    taylor_cutoff = args.taylor_cut
-    your_model = args.model_name
-    lax_thresh = args.th_lax
-    sqr_thresh = args.th_sqr
-    history_time = args.history
-    taylor_look_fraction = args.taylor_look
-    if your_model is None:
+
+    config_dict = None
+    if args.config is not None:
+        if not path.exists(args.config):
+            raise ConfigException("Config file does not exist")
+        if not path.isfile(args.config):
+            raise ConfigException("Config path is not a file")
+        try:
+            config_dict = json.load(open(args.config))["config"]
+        except json.decoder.JSONDecodeError or UnicodeDecodeError:
+            raise ConfigException("Config file does not contain valid JSON")
+        except KeyError:
+            raise ConfigException("Config file does not contain config section")
+    else:
+        # set to default options
+        config_dict = default_options
+
+    # any argument given on the command line will supersede corresponding options in the config dict
+    time_as_pred = config_dict["use_time"] if args.use_time == default_options["use_time"] else args.use_time
+    run_shuffle = config_dict["run_shuffle"] if args.run_shuffle == default_options["run_shuffle"] else args.run_shuffle
+    test_corr_thresh = config_dict["th_corr"] if np.isclose(args.th_corr, default_options["th_corr"]) else args.th_corr
+    taylor_sig = config_dict["taylor_sig"] if np.isclose(args.taylor_sig, default_options["taylor_sig"]) else args.taylor_sig
+    taylor_cutoff = config_dict["taylor_cut"] if np.isclose(args.taylor_cut, default_options["taylor_cut"]) else args.taylor_cut
+    lax_thresh = config_dict["th_lax"] if np.isclose(args.th_lax, default_options["th_lax"]) else args.th_lax
+    sqr_thresh = config_dict["th_sqr"] if np.isclose(args.th_sqr, default_options["th_sqr"]) else args.th_sqr
+    history_time = config_dict["history"] if np.isclose(args.history, default_options["history"]) else args.history
+    taylor_look_fraction = config_dict["taylor_look"] if np.isclose(args.taylor_look, default_options["taylor_look"]) else args.taylor_look
+    fit_jacobian = config_dict["jacobian"] if args.jacobian == default_options["jacobian"] else args.jacobian
+
+    if args.model_name is None:
         # set to default to file name of predictors
         your_model = path.splitext(path.split(resp_path)[-1])[0]
+    else:
+        your_model = args.model_name
 
-    # TODO: Implement second configuration "interface" allowing user to specify parameters in a config file
+    fit_epochs = config_dict["n_epochs"]
+    miner_verbose = config_dict["miner_verbose"]
+
+    # save configuration used as json file
+    configuration = {
+        "config":
+            {
+                "use_time": time_as_pred,
+                "run_shuffle": run_shuffle,
+                "th_corr": test_corr_thresh,
+                "taylor_sig": taylor_sig,
+                "taylor_cut": taylor_cutoff,
+                "th_lax": lax_thresh,
+                "th_sqr": sqr_thresh,
+                "history": history_time,
+                "taylor_look": taylor_look_fraction,
+                "jacobian": fit_jacobian,
+                "n_epochs": fit_epochs,
+                "miner_verbose": miner_verbose
+            },
+        "run":
+            {
+                "model_name": your_model,
+                "predictor_file": pred_path,
+                "response_file": resp_path,
+                "timestamp": datetime.now().now().isoformat(),
+            }
+    }
+    with open(f"MINE_{your_model}_run_config.json", 'w') as config_file:
+        json.dump(configuration, config_file, indent=2)
 
     ###
     # Load and process data
@@ -111,7 +191,8 @@ if __name__ == '__main__':
 
     if no_pred_header:
         # Without the header we will not proceed
-        app.exit(0)
+        app.quit()
+        del app
         raise MineException("Please add a descriptive header text to your predictor file; make sure that 'time' is the 1st column")
 
     pred_time = np.nanmax(pred_data, axis=0)[0]
@@ -157,24 +238,28 @@ if __name__ == '__main__':
     ###
     mdata_shuff = None
 
-    with h5py.File(path.join(path.split(resp_path)[0], f"{your_model}.hdf5"), "w") as weight_file:
+    weight_file_name = f"MINE_{your_model}_weights.hdf5"
+    with h5py.File(path.join(path.split(resp_path)[0], weight_file_name), "w") as weight_file:
         w_grp = weight_file.create_group(f"{your_model}_weights")
-        miner = Mine(2.0 / 3, model_history, test_corr_thresh, True, False, taylor_look_ahead, 5)
-        miner.verbose = True
+        miner = Mine(2.0 / 3, model_history, test_corr_thresh, True, fit_jacobian, taylor_look_ahead, 5)
+        miner.n_epochs = fit_epochs
+        miner.verbose = miner_verbose
         miner.model_weight_store = w_grp
         mdata = miner.analyze_data(mine_pred, mine_resp)
 
     # rotate mine_resp on user request and re-fit without computing any Taylor just to get test correlations
     if run_shuffle:
         mine_resp_shuff = np.roll(mine_resp, mine_resp.shape[1] // 2, axis=1)
-        with h5py.File(path.join(path.split(resp_path)[0], f"{your_model}.hdf5"), "a") as weight_file:
+        with h5py.File(path.join(path.split(resp_path)[0], weight_file_name), "a") as weight_file:
             w_grp = weight_file.create_group(f"{your_model}_weights_shuffled")
             miner = Mine(2 / 3, model_history, test_corr_thresh, False, False, taylor_look_ahead, 5)
-            miner.verbose = True
+            miner.n_epochs = fit_epochs
+            miner.verbose = miner_verbose
             miner.model_weight_store = w_grp
             mdata_shuff = miner.analyze_data(mine_pred, mine_resp_shuff)
 
-    with h5py.File(path.join(path.split(resp_path)[0], f"{your_model}_analysis.hdf5"), "w") as ana_file:
+    full_ana_file_name = f"MINE_{your_model}_analysis.hdf5"
+    with h5py.File(path.join(path.split(resp_path)[0], full_ana_file_name), "w") as ana_file:
         ana_grp = ana_file.create_group(f"analysis")
         mdata.save_to_hdf5(ana_grp)
         if mdata_shuff is not None:
@@ -186,7 +271,7 @@ if __name__ == '__main__':
     ###
     predictor_columns = pred_header if time_as_pred == 'Y' else pred_header[1:]
     interpret_dict = {"Neuron": [], "Fit": []} | {ph: [] for ph in predictor_columns} | {"Linearity": []}
-    interpret_name = f"MINE_Insights_{your_model}.csv"
+    interpret_name = f"MINE_{your_model}_Insights.csv"
     n_objects = mdata.correlations_test.size
     # for taylor analysis (which predictors are important) compute our significance levels based on a) user input
     # and b) the number of neurons above threshold which gives the multiple-comparison correction - bonferroni
@@ -221,10 +306,31 @@ if __name__ == '__main__':
     interpret_df = pd.DataFrame(interpret_dict)
     interpret_df.to_csv(path.join(path.split(resp_path)[0], interpret_name), index=False)
 
-    # TODO: Figure out a good way to save Jacobians (i.e. receptive fields) - note that each neuron will have a
-    #  separate receptive field for each predictor. In other words the shape of the Jacobian will be
-    #  n_neurons x n_predictors x n_timepoints. Option 1: Save one output CSV file per predictor which contains
-    #  the receptive fields of all neurons. Option 2: Dump them all into an hdf 5 file
+    # save Jacobians: One CSV file for each predictor, containing the Jacobians for each neuron
+    # column headers will be the time delay relative to t=0, since our modeling is set up
+    # such that convolutions are restricted to the past (hence model_history)
+    def time_from_index(ix: int) -> float:
+        ix_corr = ix - model_history + 1  # at model history is timepoint 0
+        return ip_rate * ix_corr
+
+    if fit_jacobian:
+        for i, pc in enumerate(predictor_columns):
+            jac_dict = {"Neuron": []} | {f"{time_from_index(t)}": [] for t in range(model_history)}
+            jac_file_name = f"MINE_{your_model}_ReceptiveFields_{pc}.csv"
+            for j in range(n_objects):
+                if np.any(np.isnan(mdata.jacobians[j, :])):
+                    continue
+                neuron = j if not resp_has_header else resp_header[
+                    j + 1]  # because resp_header still contains the first "time" column
+                jac_dict["Neuron"].append(neuron)
+                # index out the predictor related receptive field
+                rf = mdata.jacobians[j, i*model_history:(i+1)*model_history]
+                for t in range(model_history):
+                    jac_dict[f"{time_from_index(t)}"].append(rf[t])
+            df_jac = pd.DataFrame(jac_dict)
+            df_jac.to_csv(path.join(path.split(resp_path)[0], jac_file_name), index=False)
+
+
 
     # perform barcode clustering
     interpret_df = interpret_df[interpret_df["Fit"] == "Y"]
@@ -238,7 +344,8 @@ if __name__ == '__main__':
                        sort_categories_by=None)
     axes_dict = up_set.plot(fig)
     axes_dict['intersections'].set_yscale('log')
-    fig.savefig(path.join(path.split(resp_path)[0], f"{your_model}_BarcodeUpsetPlot.pdf"))
+    fig.savefig(path.join(path.split(resp_path)[0], f"MINE_{your_model}_BarcodeUpsetPlot.pdf"))
 
     # finally quit qt app
-    app.exit(0)
+    app.quit()
+    del app
