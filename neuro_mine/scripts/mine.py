@@ -106,12 +106,13 @@ class Mine:
                 raise ValueError(f"Predictor {i} has a different number of timesteps than the responses. {pd.size} vs. "
                                  f"{res_len}")
         # warn user if data is not standardized
-        if not np.allclose(np.mean(response_data, 1), 0) or not np.allclose(np.std(response_data, 1), 1):
+        if (not np.allclose(np.mean(response_data, 1), 0, atol=1e-2)
+                or not np.allclose(np.std(response_data, 1), 1, atol=1e-2)):
             print("WARNING: Response data does not appear standardized to 0 mean and standard deviation 1")
+            print(np.mean(response_data, 1))
+            print(np.std(response_data, 1))
         for i, pd in enumerate(pred_data):
-            if not np.isclose(np.mean(pd), 0, atol=1e-6) or not np.isclose(np.std(pd), 1, atol=1e-6):
-                print(np.mean(pd))
-                print(np.std(pd))
+            if not np.isclose(np.mean(pd), 0, atol=1e-2) or not np.isclose(np.std(pd), 1, atol=1e-2):
                 print(f"WARNING: Predictor {i} does not appear standardized to 0 mean and standard deviation 1")
         train_frames = int(self.train_fraction * res_len)
         n_predictors = len(pred_data)
@@ -145,7 +146,7 @@ class Mine:
 
         data_obj = utilities.Data(self.model_history, pred_data, response_data, train_frames)
         # create model once
-        m = model.get_standard_model(self.model_history)
+        m = model.get_standard_model(self.model_history, False)
         # the following is required to init variables at desired shape
         m(np.random.randn(1, self.model_history, len(data_obj.regressors)).astype(np.float32))
         # save untrained weights to reinitalize model without having to recreate the class which somehow leaks memory
