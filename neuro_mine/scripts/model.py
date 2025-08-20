@@ -17,7 +17,8 @@ class ActivityPredictor(keras.Model):
     Simple network for non-linear prediction of calcium activity
     """
 
-    def __init__(self, n_units: int, n_conv: int, drop_rate: float, input_length: int, activation: str):
+    def __init__(self, n_units: int, n_conv: int, drop_rate: float, input_length: int, activation: str,
+                 predict_spikes: bool):
         """
         Creates a new NetNavigator
         :param n_units: The number of units in each dense layer
@@ -25,6 +26,7 @@ class ActivityPredictor(keras.Model):
         :param drop_rate: The drop-out rate during training
         :param input_length: The length (across time) of inputs to the network (sets conv filter size)
         :param activation: The activation function to use
+        :param predict_spikes: If true, 0/1 spike data instead of continuous data is expected
         """
         super(ActivityPredictor, self).__init__()
         if drop_rate < 0 or drop_rate > 1:
@@ -61,6 +63,8 @@ class ActivityPredictor(keras.Model):
         self._flatten: Optional[keras.layers.Layer] = None
         # model-specific cash field used during derivative calculation
         self.part_tensor_1: Optional[np.ndarray] = None
+        # Store if this is a model to predict continuous data or spikes
+        self.predict_spikes = predict_spikes
 
     def setup(self) -> None:
         """
@@ -99,7 +103,11 @@ class ActivityPredictor(keras.Model):
         self._out = layers.Dense(1, activation=None, name="Out")
         # create our optimizer and loss functions
         self.optimizer = keras.optimizers.Adam(self.learning_rate)
-        self.loss_fn = keras.losses.MeanSquaredError()
+        # all we need to do to be able to predict spikes is change our loss function! This change is transparent
+        if self.predict_spikes:
+            self.loss_fn = keras.losses.BinaryCrossentropy(from_logits=True)
+        else:
+            self.loss_fn = keras.losses.MeanSquaredError()
         self._initialized = True
 
     def get_output(self, inputs: np.ndarray) -> float:
@@ -111,6 +119,18 @@ class ActivityPredictor(keras.Model):
         self.check_input(inputs)
         out = self(inputs)
         return out.numpy().ravel()
+
+    def get_probability(self, inputs: np.ndarray) -> float:
+        """
+        Returns the spike probability given model inputs
+        :param inputs: batchsize x input_length x n_regressors (the channels)
+        :return: 1 output value corresponding to the spike probability
+        """
+        if not self.predict_spikes:
+            raise ValueError("Model does not predict spikes. Probability representation is meaningless")
+        self.check_input(inputs)
+        logit_out = self(inputs)
+        return tf.math.sigmoid(logit_out).numpy().ravel()
 
     def clear_model(self) -> None:
         """
@@ -235,13 +255,14 @@ def train_model(mdl: ActivityPredictor, tset: tf.data.Dataset, n_epochs: int, da
             mdl.train_step(inp, outp)
 
 
-def get_standard_model(hist_steps: int) -> ActivityPredictor:
+def get_standard_model(hist_steps: int, predict_spikes: bool) -> ActivityPredictor:
     """
     Creates and returns an activity predictor instance with standard parameters
-    found through a hyper-parameter search
+    found through a hyperparameter search
     :param hist_steps: The number of history steps in the model
+    :param predict_spikes: If true, 0/1 spike data instead of continuous data is expected
     """
-    m = ActivityPredictor(64, 80, 0.5, hist_steps, "swish")
+    m = ActivityPredictor(64, 80, 0.5, hist_steps, "swish", predict_spikes)
     m.learning_rate = 1e-3
     m.l2_sparsity = 1e-5
     m.setup()
