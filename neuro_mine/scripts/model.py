@@ -43,8 +43,6 @@ class ActivityPredictor(keras.Model):
         # optimizer and loss functions
         self.optimizer: Optional[keras.optimizers.Optimizer] = None
         self.loss_fn: Optional[keras.losses.Loss] = None
-        # training metrics
-        self.rmse: Optional[keras.metrics.Metric] = None
         self._initialized: bool = False
         # output placeholders
         self._out: Optional[keras.layers.Layer] = None
@@ -102,8 +100,6 @@ class ActivityPredictor(keras.Model):
         # create our optimizer and loss functions
         self.optimizer = keras.optimizers.Adam(self.learning_rate)
         self.loss_fn = keras.losses.MeanSquaredError()
-        # create training metric
-        self.rmse = keras.metrics.RootMeanSquaredError()
         self._initialized = True
 
     def get_output(self, inputs: np.ndarray) -> float:
@@ -178,14 +174,6 @@ class ActivityPredictor(keras.Model):
             loss += sum(self.losses)
         gradients = tape.gradient(loss, self.trainable_variables)
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
-        self.rmse(btch_labels, pred)
-
-    def reset_metrics(self) -> None:
-        """
-        Resets training accuracy metrics of the object
-        """
-        self.check_init()
-        self.rmse.reset_states()
 
     @property
     def activation(self) -> str:
