@@ -1,6 +1,6 @@
 # Model Identification of Neural Encoding (MINE) 🧠💻
 
-This program allows users to use MINE to train a flexible convolutional neural network (CNN) to analyze experimental datasets containing neural activity and corresponding predictors (e.g., behavioral responses).
+Welcome to MINE: your handy companion for processing neuronal response data! This program allows users to use MINE to train a flexible convolutional neural network (CNN) to analyze experimental datasets containing neural activity and corresponding predictors (e.g., behavioral responses).
 
 *Authors:*
 <br>Dr. Martin Haesemeyer
@@ -42,6 +42,10 @@ pip install neuro_mine
 
 ```bash
 Mine
+```
+** to see possible command line prompts to customize the model, run the command:
+```bash
+Mine --help
 ```
 
 [5] Follow dialog prompts to select predictors and response .csv files. These files must have the following structure:
