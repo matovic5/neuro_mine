@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import numpy as np
 import tensorflow as tf
-import neuro_mine.scripts.model
 import h5py
 from typing import Union, List, Any, Optional
 from numba import njit
