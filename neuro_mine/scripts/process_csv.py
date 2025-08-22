@@ -37,7 +37,8 @@ default_options = {
     "taylor_look": 0.5,
     "jacobian": False,
     "n_epochs": 100,
-    "miner_verbose": True
+    "miner_verbose": True,
+    "miner_train_fraction": 2.0/3
 }
 
 
@@ -135,6 +136,7 @@ if __name__ == '__main__':
 
     fit_epochs = config_dict["n_epochs"]
     miner_verbose = config_dict["miner_verbose"]
+    miner_train_fraction = config_dict["miner_train_fraction"]
 
     # save configuration used as json file
     configuration = {
@@ -151,7 +153,8 @@ if __name__ == '__main__':
                 "taylor_look": taylor_look_fraction,
                 "jacobian": fit_jacobian,
                 "n_epochs": fit_epochs,
-                "miner_verbose": miner_verbose
+                "miner_verbose": miner_verbose,
+                "miner_train_fraction": miner_train_fraction
             },
         "run":
             {
@@ -241,7 +244,8 @@ if __name__ == '__main__':
     weight_file_name = f"MINE_{your_model}_weights.hdf5"
     with h5py.File(path.join(path.split(resp_path)[0], weight_file_name), "w") as weight_file:
         w_grp = weight_file.create_group(f"{your_model}_weights")
-        miner = Mine(2.0 / 3, model_history, test_corr_thresh, True, fit_jacobian, taylor_look_ahead, 5)
+        miner = Mine(miner_train_fraction, model_history, test_corr_thresh, True, fit_jacobian,
+                     taylor_look_ahead, 5)
         miner.n_epochs = fit_epochs
         miner.verbose = miner_verbose
         miner.model_weight_store = w_grp
@@ -252,7 +256,8 @@ if __name__ == '__main__':
         mine_resp_shuff = np.roll(mine_resp, mine_resp.shape[1] // 2, axis=1)
         with h5py.File(path.join(path.split(resp_path)[0], weight_file_name), "a") as weight_file:
             w_grp = weight_file.create_group(f"{your_model}_weights_shuffled")
-            miner = Mine(2 / 3, model_history, test_corr_thresh, False, False, taylor_look_ahead, 5)
+            miner = Mine(miner_train_fraction, model_history, test_corr_thresh, False, False,
+                         taylor_look_ahead, 5)
             miner.n_epochs = fit_epochs
             miner.verbose = miner_verbose
             miner.model_weight_store = w_grp
