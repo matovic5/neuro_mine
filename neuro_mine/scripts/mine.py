@@ -8,6 +8,8 @@ import neuro_mine.scripts.utilities as utilities
 import neuro_mine.scripts.model as model
 from neuro_mine.scripts.taylorDecomp import taylor_decompose, d2ca_dr2, complexity_scores
 from dataclasses import dataclass
+import warnings
+
 @dataclass(frozen=True)
 class _BaseData:
     """
@@ -79,6 +81,11 @@ class MineSpikingData(_BaseData):
         utilities.create_overwrite(file_object, "roc_auc_test", self.roc_auc_test, overwrite)
 
 
+class MineWarning(Warning):
+    def __init__(self, message: str):
+        super().__init__(message)
+
+
 class Mine:
     """
     Class that collects intended model data and provides
@@ -124,7 +131,7 @@ class Mine:
         self.verbose = True
         self.fit_spikes = fit_spikes
 
-    def analyze_data(self, pred_data: List[np.ndarray], response_data: np.ndarray) -> MineData:
+    def analyze_data(self, pred_data: List[np.ndarray], response_data: np.ndarray) -> _BaseData:
         """
         Process given data with MINE
         :param pred_data: Predictor data as a list of n_timepoints long vectors. Predictors are shared among all
@@ -139,15 +146,21 @@ class Mine:
             if pd.size != res_len:
                 raise ValueError(f"Predictor {i} has a different number of timesteps than the responses. {pd.size} vs. "
                                  f"{res_len}")
-        # warn user if data is not standardized
-        if (not np.allclose(np.mean(response_data, 1), 0, atol=1e-2)
-                or not np.allclose(np.std(response_data, 1), 1, atol=1e-2)):
-            print("WARNING: Response data does not appear standardized to 0 mean and standard deviation 1")
-            print(np.mean(response_data, 1))
-            print(np.std(response_data, 1))
+        # warn user if data is not standardized - however for spiking analysis data should not be standardized!
+        if not self.fit_spikes:
+            if (not np.allclose(np.mean(response_data, 1), 0, atol=1e-2)
+                    or not np.allclose(np.std(response_data, 1), 1, atol=1e-2)):
+                warnings.warn("WARNING: Response data does not appear standardized to 0 mean and standard deviation 1",
+                              MineWarning)
+        else:
+            if not np.all(np.logical_or(response_data == 0 , response_data == 1)):
+                warnings.warn("WARNING: Spike data analysis selected but at least part of the data is neither 1 nor 0",
+                              MineWarning)
+        # predictors should ideally always be standardized
         for i, pd in enumerate(pred_data):
             if not np.isclose(np.mean(pd), 0, atol=1e-2) or not np.isclose(np.std(pd), 1, atol=1e-2):
-                print(f"WARNING: Predictor {i} does not appear standardized to 0 mean and standard deviation 1")
+                warnings.warn(f"WARNING: Predictor {i} does not appear standardized to 0 mean and standard deviation 1",
+                              MineWarning)
         train_frames = int(self.train_fraction * res_len)
         n_predictors = len(pred_data)
 
