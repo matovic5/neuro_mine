@@ -62,6 +62,23 @@ class MineData(_BaseData):
         utilities.create_overwrite(file_object, "correlations_test", self.correlations_test, overwrite)
 
 
+@dataclass(frozen=True)
+class MineSpikingData(_BaseData):
+    """Class for the return values of MINE after spiking analysis"""
+    roc_auc_trained: np.ndarray
+    roc_auc_test: np.ndarray
+
+    def save_to_hdf5(self, file_object: Union[h5py.File, h5py.Group], overwrite=False) -> None:
+        """
+        Saves all contents to a hdf5 file or group object
+        :param file_object: The file/group to save to
+        :param overwrite: If true will overwrite data in the file
+        """
+        super().save_to_hdf5(file_object, overwrite)
+        utilities.create_overwrite(file_object, "roc_auc_trained", self.roc_auc_trained, overwrite)
+        utilities.create_overwrite(file_object, "roc_auc_test", self.roc_auc_test, overwrite)
+
+
 class Mine:
     """
     Class that collects intended model data and provides
