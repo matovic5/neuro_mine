@@ -43,11 +43,7 @@ default_options = {
 
 if __name__ == '__main__':
     # TODO: For transition to allow spiking input data:
-    #   1) Need to auto-detect spiking data should be simple unless we want to allow anything but 0/1 coding of spikes
     #   2) Need to adjust interpolation to avoid intermediate values and skipping spikes (how?)
-    #   3) Need to rename performance metrics in insights file (not R2 but ROC-AUC)
-    #   4) Need to remove safe standardization of responses!! MINE should ignore absence for spiking data
-    #   5) Need to make sure that Taylor analysis and nonlinearity analysis will work with ROC AUC
 
     app = QApplication([])
     # the following will prevent tensorflow from using the GPU - as the used models have very low complexity
@@ -188,6 +184,16 @@ if __name__ == '__main__':
         resp_data = np.genfromtxt(resp_path, delimiter=",", skip_header=1)
         resp_has_header = True
 
+    # We use a very simple heuristic to detect spiking data and we will not allow for mixed data. In other words
+    # a response file either contains all continuous data or all spiking data. When in doubt, we will treat as
+    # continuous
+    if np.all(np.logical_or(resp_data==0, resp_data==1)):
+        is_spike_data = True
+        print("Responses are assumed to contain spikes")
+    else:
+        is_spike_data = False
+        print("Responses are assumed to be continuous")
+
     pred_header = np.genfromtxt(pred_path, delimiter=",", max_rows=1, dtype=str)
 
     no_pred_header = False
@@ -220,15 +226,22 @@ if __name__ == '__main__':
 
     ip_pred_data = np.hstack(
         [np.interp(ip_time, pred_times[valid_pred], pd[valid_pred])[:, None] for pd in pred_data.T])
-    ip_resp_data = np.hstack(
-        [np.interp(ip_time, resp_times[valid_resp], rd[valid_resp])[:, None] for rd in resp_data.T])
+    if not is_spike_data:
+        ip_resp_data = np.hstack(
+            [np.interp(ip_time, resp_times[valid_resp], rd[valid_resp])[:, None] for rd in resp_data.T])
+    else:
+        raise NotImplementedError("Can't interpolate spike data the standard way")
 
     if time_as_pred == "Y":
         mine_pred = [safe_standardize(ipd) for ipd in ip_pred_data.T]
     else:
         mine_pred = [safe_standardize(ipd) for ipd in ip_pred_data.T[1:]]
 
-    mine_resp = safe_standardize(ip_resp_data[:, 1:]).T
+    # In the following the first column is removed since it is time
+    if not is_spike_data:
+        mine_resp = safe_standardize(ip_resp_data[:, 1:]).T
+    else:
+        mine_resp = ip_resp_data[:, 1:].T
 
     # compute our "frame rate", i.e. frames per time-unit on the interpolated scale
     ip_rate = 1 / np.mean(np.diff(ip_time))
@@ -251,7 +264,7 @@ if __name__ == '__main__':
     with h5py.File(path.join(path.split(resp_path)[0], weight_file_name), "w") as weight_file:
         w_grp = weight_file.create_group(f"{your_model}_weights")
         miner = Mine(miner_train_fraction, model_history, test_score_thresh, True, fit_jacobian,
-                     taylor_look_ahead, 5, fit_spikes=False)
+                     taylor_look_ahead, 5, fit_spikes=is_spike_data)
         miner.n_epochs = fit_epochs
         miner.verbose = miner_verbose
         miner.model_weight_store = w_grp
@@ -263,7 +276,7 @@ if __name__ == '__main__':
         with h5py.File(path.join(path.split(resp_path)[0], weight_file_name), "a") as weight_file:
             w_grp = weight_file.create_group(f"{your_model}_weights_shuffled")
             miner = Mine(miner_train_fraction, model_history, test_score_thresh, False, False,
-                         taylor_look_ahead, 5, fit_spikes=False)
+                         taylor_look_ahead, 5, fit_spikes=is_spike_data)
             miner.n_epochs = fit_epochs
             miner.verbose = miner_verbose
             miner.model_weight_store = w_grp
@@ -280,13 +293,14 @@ if __name__ == '__main__':
     ###
     # Output model insights as csv
     ###
+    model_scores = mdata.roc_auc_test if is_spike_data else mdata.correlations_test
     predictor_columns = pred_header if time_as_pred == 'Y' else pred_header[1:]
     interpret_dict = {"Neuron": [], "Fit": []} | {ph: [] for ph in predictor_columns} | {"Linearity": []}
     interpret_name = f"MINE_{your_model}_Insights.csv"
-    n_objects = mdata.correlations_test.size
+    n_objects = model_scores.size
     # for taylor analysis (which predictors are important) compute our significance levels based on a) user input
     # and b) the number of neurons above threshold which gives the multiple-comparison correction - bonferroni
-    min_significance = 1 - taylor_sig / np.sum(mdata.correlations_test >= test_score_thresh)
+    min_significance = 1 - taylor_sig / np.sum(model_scores >= test_score_thresh)
     normal_quantiles_by_sigma = np.array([0.682689492137, 0.954499736104, 0.997300203937, 0.999936657516,
                                           0.999999426697, 0.999999998027])
     n_sigma = np.where((min_significance - normal_quantiles_by_sigma) < 0)[0][0] + 1
@@ -295,7 +309,7 @@ if __name__ == '__main__':
         neuron = j if not resp_has_header else resp_header[
             j + 1]  # because resp_header still contains the first "time" column
         interpret_dict["Neuron"].append(neuron)
-        fit = mdata.correlations_test[j] > test_score_thresh
+        fit = model_scores[j] > test_score_thresh
         interpret_dict["Fit"].append("Y" if fit else "N")
         if not fit:
             for pc in predictor_columns:
