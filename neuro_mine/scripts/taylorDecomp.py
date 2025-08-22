@@ -205,8 +205,7 @@ def taylor_decompose(mdl: model.ActivityPredictor, regressors: np.ndarray, take_
     return np.hstack(mdl_out_change), np.hstack(full_tp_change), np.vstack(by_reg_tp_change)
 
 
-def data_mean_prediction(mdl: model.ActivityPredictor, x_bar, j_x_bar, h_x_bar, regressors: np.ndarray, take_every: int,
-                         return_1storder=False):
+def data_mean_prediction(mdl: model.ActivityPredictor, x_bar, j_x_bar, h_x_bar, regressors: np.ndarray, take_every: int):
     """
     Computes the prediction of responses based on a fixed Taylor expansion of the network around a specific point
     in our case taken to be the data mean
@@ -216,11 +215,10 @@ def data_mean_prediction(mdl: model.ActivityPredictor, x_bar, j_x_bar, h_x_bar, 
     :param h_x_bar: The hession of the model at x_bar
     :param regressors: The 2D regressor matrix, n_timesteps x m_regressors
     :param take_every: Only compute metrics every n frames to save time
-    :param return_1storder: If set to true first order model predictions will be returned as well
     :return:
         [0]: The prediction of the CNN model
-        [1]: The prediction of the fixed-point expansion
-        [2]: If return_1storder is set to true the prediction of a linear fixed-point expansion
+        [1]: The prediction of the 2nd order fixed-point expansion
+        [2]: The prediction of a linear fixed-point expansion
     """
     # NOTE: We should speed this up - create 2nd-order design matrix from input and then directly treat this as a
     # regression problem, replacing the ugly while-loop with a matrix multiplication
@@ -244,12 +242,9 @@ def data_mean_prediction(mdl: model.ActivityPredictor, x_bar, j_x_bar, h_x_bar, 
         mp_lin = f_x_bar + np.dot(reg_diff, d1)
         mp = mp_lin + 0.5 * np.sum(np.dot(reg_diff[:, None], reg_diff[None, :]) * d2)
         mean_prediction.append(mp)
-        if return_1storder:
-            mean_prediction_lin.append(mp_lin)
+        mean_prediction_lin.append(mp_lin)
         t += take_every
-    if return_1storder:
-        return np.hstack(mdl_out), np.hstack(mean_prediction), np.hstack(mean_prediction_lin)
-    return np.hstack(mdl_out), np.hstack(mean_prediction)
+    return np.hstack(mdl_out), np.hstack(mean_prediction), np.hstack(mean_prediction_lin)
 
 
 def complexity_scores(mdl: model.ActivityPredictor, x_bar, j_x_bar, h_x_bar, regressors: np.ndarray, take_every: int):
@@ -265,7 +260,7 @@ def complexity_scores(mdl: model.ActivityPredictor, x_bar, j_x_bar, h_x_bar, reg
         [0]: The R2 (coefficient of determination) of the linear 1st order approximation
         [1]: The R2 of the 2nd order approximation
     """
-    true_model, order_2, order_1 = data_mean_prediction(mdl, x_bar, j_x_bar, h_x_bar, regressors, take_every, True)
+    true_model, order_2, order_1 = data_mean_prediction(mdl, x_bar, j_x_bar, h_x_bar, regressors, take_every)
     ss_tot = np.sum((true_model - np.mean(true_model))**2)
     lin_score = 1 - np.sum((true_model - order_1)**2)/ss_tot
     sq_score = 1 - np.sum((true_model - order_2)**2)/ss_tot
