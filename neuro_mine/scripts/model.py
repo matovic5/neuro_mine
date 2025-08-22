@@ -102,7 +102,7 @@ class ActivityPredictor(keras.Model):
         # output: This is just one value, that should predict the calcium response at the current time
         self._out = layers.Dense(1, activation=None, name="Out")
         # create our optimizer and loss functions
-        self.optimizer = keras.optimizers.Adam(self.learning_rate)
+        self.optimizer = keras.optimizers.legacy.Adam(self.learning_rate)
         # all we need to do to be able to predict spikes is change our loss function! This change is transparent
         if self.predict_spikes:
             self.loss_fn = keras.losses.BinaryCrossentropy(from_logits=True)

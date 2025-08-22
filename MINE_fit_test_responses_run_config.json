@@ -1,0 +1,23 @@
+{
+  "config": {
+    "use_time": false,
+    "run_shuffle": false,
+    "th_test": 0.7071067811865476,
+    "taylor_sig": 0.05,
+    "taylor_cut": 0.1,
+    "th_lax": 0.8,
+    "th_sqr": 0.5,
+    "history": 10.0,
+    "taylor_look": 0.5,
+    "jacobian": false,
+    "n_epochs": 100,
+    "miner_verbose": true,
+    "miner_train_fraction": 0.6666666666666666
+  },
+  "run": {
+    "model_name": "fit_test_responses",
+    "predictor_file": "/Users/danicamatovic/PycharmProjects/MINE/fit_test_predictors.csv",
+    "response_file": "/Users/danicamatovic/PycharmProjects/MINE/fit_test_responses.csv",
+    "timestamp": "2025-08-22T15:42:03.055452"
+  }
+}
