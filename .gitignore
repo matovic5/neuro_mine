@@ -2,8 +2,12 @@
 __pycache__/
 *.py[cod]
 *$py.class
-.hdf5
-.h5
+*.hdf5
+*.h5
+*.pdf
+*.csv
+*.DS_Store
+*.json
 
 # Virtual environment
 venv/
