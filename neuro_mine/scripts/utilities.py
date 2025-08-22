@@ -226,7 +226,7 @@ def rearrange_hessian(hessian: np.ndarray, npreds: int, inp_length: int) -> np.n
     return hessian_r
 
 
-def simulate_response(act_predictor: model.ActivityPredictor, predictors: np.ndarray) -> np.ndarray:
+def simulate_response(act_predictor, predictors: np.ndarray) -> np.ndarray:
     """
     Simulate the predicted response of a neuron to an arbitrary input
     :param act_predictor: The model used to predict the response
@@ -359,7 +359,7 @@ class Data:
             reg_data[:, i] = this_reg.ravel().copy()
         return reg_data
 
-    def predict_response(self, sample_ix: int, act_predictor: model.ActivityPredictor):
+    def predict_response(self, sample_ix: int, act_predictor):
         """
         Obtains the predicted response for a given cell
         :param sample_ix: The index of the cell
