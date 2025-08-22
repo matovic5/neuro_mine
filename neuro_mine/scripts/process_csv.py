@@ -28,7 +28,7 @@ class ConfigException(Exception):
 default_options = {
     "use_time": False,
     "run_shuffle": False,
-    "th_corr": np.sqrt(0.5),
+    "th_test": np.sqrt(0.5),
     "taylor_sig": 0.05,
     "taylor_cut": 0.1,
     "th_lax": 0.8,
@@ -58,9 +58,9 @@ if __name__ == '__main__':
                           action='store_true')
     a_parser.add_argument("-sh", "--run_shuffle", help="If set shuffled controls will be run as well.",
                           action='store_true')
-    a_parser.add_argument("-ct", "--th_corr", help="The test correlation threshold to "
+    a_parser.add_argument("-ct", "--th_test", help="The test score threshold to "
                                                    "decide that fit was successful.",
-                          type=float, default=default_options['th_corr'])
+                          type=float, default=default_options['th_test'])
     a_parser.add_argument("-ts", "--taylor_sig", help="The significance threshold for taylor expansion.",
                           type=float, default=default_options['taylor_sig'])
     a_parser.add_argument("-tc", "--taylor_cut", help="The variance fraction that has to be lost to"
@@ -119,7 +119,7 @@ if __name__ == '__main__':
     # any argument given on the command line will supersede corresponding options in the config dict
     time_as_pred = config_dict["use_time"] if args.use_time == default_options["use_time"] else args.use_time
     run_shuffle = config_dict["run_shuffle"] if args.run_shuffle == default_options["run_shuffle"] else args.run_shuffle
-    test_corr_thresh = config_dict["th_corr"] if np.isclose(args.th_corr, default_options["th_corr"]) else args.th_corr
+    test_score_thresh = config_dict["th_test"] if np.isclose(args.th_test, default_options["th_test"]) else args.th_test
     taylor_sig = config_dict["taylor_sig"] if np.isclose(args.taylor_sig, default_options["taylor_sig"]) else args.taylor_sig
     taylor_cutoff = config_dict["taylor_cut"] if np.isclose(args.taylor_cut, default_options["taylor_cut"]) else args.taylor_cut
     lax_thresh = config_dict["th_lax"] if np.isclose(args.th_lax, default_options["th_lax"]) else args.th_lax
@@ -144,7 +144,7 @@ if __name__ == '__main__':
             {
                 "use_time": time_as_pred,
                 "run_shuffle": run_shuffle,
-                "th_corr": test_corr_thresh,
+                "th_test": test_score_thresh,
                 "taylor_sig": taylor_sig,
                 "taylor_cut": taylor_cutoff,
                 "th_lax": lax_thresh,
@@ -244,7 +244,7 @@ if __name__ == '__main__':
     weight_file_name = f"MINE_{your_model}_weights.hdf5"
     with h5py.File(path.join(path.split(resp_path)[0], weight_file_name), "w") as weight_file:
         w_grp = weight_file.create_group(f"{your_model}_weights")
-        miner = Mine(miner_train_fraction, model_history, test_corr_thresh, True, fit_jacobian,
+        miner = Mine(miner_train_fraction, model_history, test_score_thresh, True, fit_jacobian,
                      taylor_look_ahead, 5, fit_spikes=False)
         miner.n_epochs = fit_epochs
         miner.verbose = miner_verbose
@@ -256,7 +256,7 @@ if __name__ == '__main__':
         mine_resp_shuff = np.roll(mine_resp, mine_resp.shape[1] // 2, axis=1)
         with h5py.File(path.join(path.split(resp_path)[0], weight_file_name), "a") as weight_file:
             w_grp = weight_file.create_group(f"{your_model}_weights_shuffled")
-            miner = Mine(miner_train_fraction, model_history, test_corr_thresh, False, False,
+            miner = Mine(miner_train_fraction, model_history, test_score_thresh, False, False,
                          taylor_look_ahead, 5, fit_spikes=False)
             miner.n_epochs = fit_epochs
             miner.verbose = miner_verbose
@@ -280,7 +280,7 @@ if __name__ == '__main__':
     n_objects = mdata.correlations_test.size
     # for taylor analysis (which predictors are important) compute our significance levels based on a) user input
     # and b) the number of neurons above threshold which gives the multiple-comparison correction - bonferroni
-    min_significance = 1 - taylor_sig / np.sum(mdata.correlations_test >= test_corr_thresh)
+    min_significance = 1 - taylor_sig / np.sum(mdata.correlations_test >= test_score_thresh)
     normal_quantiles_by_sigma = np.array([0.682689492137, 0.954499736104, 0.997300203937, 0.999936657516,
                                           0.999999426697, 0.999999998027])
     n_sigma = np.where((min_significance - normal_quantiles_by_sigma) < 0)[0][0] + 1
@@ -289,7 +289,7 @@ if __name__ == '__main__':
         neuron = j if not resp_has_header else resp_header[
             j + 1]  # because resp_header still contains the first "time" column
         interpret_dict["Neuron"].append(neuron)
-        fit = mdata.correlations_test[j] > test_corr_thresh
+        fit = mdata.correlations_test[j] > test_score_thresh
         interpret_dict["Fit"].append("Y" if fit else "N")
         if not fit:
             for pc in predictor_columns:

@@ -67,13 +67,13 @@ class Mine:
     Class that collects intended model data and provides
     analysis function to be run on user-data
     """
-    def __init__(self, train_fraction: float, model_history: int, corr_cut: float, compute_taylor: bool,
+    def __init__(self, train_fraction: float, model_history: int, score_cut: float, compute_taylor: bool,
                  return_jacobians: bool, taylor_look_ahead: int, taylor_pred_every: int, fit_spikes: bool):
         """
         Create a new Mine object
         :param train_fraction: The fraction of frames to use for training 0 < train <= 1
         :param model_history: The number of frames to include in the model "history" (Note 1)
-        :param corr_cut: Minimum correlation required on test data to compute other metrics
+        :param score_cut: Minimum correlation required on test data to compute other metrics
         :param compute_taylor: If true, perform taylor expansion and complexity/nonlin evaluation and return results
         :param return_jacobians: If true, return the model jacobians at the data mean
         :param taylor_look_ahead: How many frames into the future to compute the taylor expansion (usually a few secs)
@@ -103,7 +103,7 @@ class Mine:
         self.n_epochs = 100  # sensible default
         self.taylor_look_ahead = taylor_look_ahead
         self.taylor_pred_every = taylor_pred_every
-        self.corr_cut = corr_cut
+        self.score_cut = score_cut
         self.verbose = True
         self.fit_spikes = fit_spikes
 
@@ -189,7 +189,7 @@ class Mine:
             # if the cell doesn't have a test correlation of at least corr_cut we skip the rest
             # NOTE: This means that some return values will only have one entry for each unit
             # that made the cut - the user will have to handle those cases
-            if c_ts < self.corr_cut or not np.isfinite(c_ts):
+            if c_ts < self.score_cut or not np.isfinite(c_ts):
                 if self.verbose:
                     print(f"        Unit {cell_ix+1} out of {response_data.shape[0]} fit. "
                           f"Test corr={correlations_test[cell_ix]} which was below cut-off.")
