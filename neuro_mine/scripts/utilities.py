@@ -266,6 +266,10 @@ def modified_gram_schmidt(col_mat: np.ndarray) -> np.ndarray:
     return v
 
 
+def sigmoid(x):
+    return 1/(1 + np.exp(-x))
+
+
 class Data:
     def __init__(self, input_steps, regressors: list, ca_responses: np.ndarray, tsteps_for_train=-1):
         """
