@@ -8,6 +8,7 @@ import numpy as np
 import tensorflow as tf
 from numba import njit
 from typing import List, Tuple
+from neuro_mine.scripts import utilities
 
 
 @tf.function
@@ -205,7 +206,8 @@ def taylor_decompose(mdl: model.ActivityPredictor, regressors: np.ndarray, take_
     return np.hstack(mdl_out_change), np.hstack(full_tp_change), np.vstack(by_reg_tp_change)
 
 
-def data_mean_prediction(mdl: model.ActivityPredictor, x_bar, j_x_bar, h_x_bar, regressors: np.ndarray, take_every: int):
+def data_mean_prediction(mdl: model.ActivityPredictor, x_bar, j_x_bar, h_x_bar, regressors: np.ndarray, take_every: int,
+                         use_probability: bool):
     """
     Computes the prediction of responses based on a fixed Taylor expansion of the network around a specific point
     in our case taken to be the data mean
@@ -215,6 +217,7 @@ def data_mean_prediction(mdl: model.ActivityPredictor, x_bar, j_x_bar, h_x_bar, 
     :param h_x_bar: The hession of the model at x_bar
     :param regressors: The 2D regressor matrix, n_timesteps x m_regressors
     :param take_every: Only compute metrics every n frames to save time
+    :param use_probability: If set to true, all outputs will be transformed to probabilities via sigmoid transform
     :return:
         [0]: The prediction of the CNN model
         [1]: The prediction of the 2nd order fixed-point expansion
@@ -236,18 +239,26 @@ def data_mean_prediction(mdl: model.ActivityPredictor, x_bar, j_x_bar, h_x_bar, 
         # compute our difference to the data mean
         reg_diff = (cur_regs - x_bar).ravel().astype(np.float64)
         # get the actual model prediction at the current point and add to our return
-        cur_mod_out = mdl.get_output(cur_regs)
+        if use_probability:
+            cur_mod_out = mdl.get_probability(cur_regs)
+        else:
+            cur_mod_out = mdl.get_output(cur_regs)
         mdl_out.append(cur_mod_out)
         # compute taylor decomposition around data mean
         mp_lin = f_x_bar + np.dot(reg_diff, d1)
         mp = mp_lin + 0.5 * np.sum(np.dot(reg_diff[:, None], reg_diff[None, :]) * d2)
-        mean_prediction.append(mp)
-        mean_prediction_lin.append(mp_lin)
+        if use_probability:
+            mean_prediction.append(utilities.sigmoid(mp))
+            mean_prediction_lin.append(utilities.sigmoid(mp_lin))
+        else:
+            mean_prediction.append(mp)
+            mean_prediction_lin.append(mp_lin)
         t += take_every
     return np.hstack(mdl_out), np.hstack(mean_prediction), np.hstack(mean_prediction_lin)
 
 
-def complexity_scores(mdl: model.ActivityPredictor, x_bar, j_x_bar, h_x_bar, regressors: np.ndarray, take_every: int):
+def complexity_scores(mdl: model.ActivityPredictor, x_bar, j_x_bar, h_x_bar, regressors: np.ndarray, take_every: int,
+                      use_probability: bool):
     """
     Computes complexity scores - the squared correlation of a linear and a squared model around the data mean
     :param mdl: The CNN model
@@ -256,11 +267,13 @@ def complexity_scores(mdl: model.ActivityPredictor, x_bar, j_x_bar, h_x_bar, reg
     :param h_x_bar: The hession of the model at x_bar
     :param regressors: The 2D regressor matrix, n_timesteps x m_regressors
     :param take_every: Only compute metrics every n frames to save time
+    :param use_probability: If set to true, all outputs will be transformed to probabilities via sigmoid transform
     :return:
         [0]: The R2 (coefficient of determination) of the linear 1st order approximation
         [1]: The R2 of the 2nd order approximation
     """
-    true_model, order_2, order_1 = data_mean_prediction(mdl, x_bar, j_x_bar, h_x_bar, regressors, take_every)
+    true_model, order_2, order_1 = data_mean_prediction(mdl, x_bar, j_x_bar, h_x_bar, regressors, take_every,
+                                                        use_probability)
     ss_tot = np.sum((true_model - np.mean(true_model))**2)
     lin_score = 1 - np.sum((true_model - order_1)**2)/ss_tot
     sq_score = 1 - np.sum((true_model - order_2)**2)/ss_tot
