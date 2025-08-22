@@ -245,7 +245,7 @@ if __name__ == '__main__':
     with h5py.File(path.join(path.split(resp_path)[0], weight_file_name), "w") as weight_file:
         w_grp = weight_file.create_group(f"{your_model}_weights")
         miner = Mine(miner_train_fraction, model_history, test_corr_thresh, True, fit_jacobian,
-                     taylor_look_ahead, 5)
+                     taylor_look_ahead, 5, fit_spikes=False)
         miner.n_epochs = fit_epochs
         miner.verbose = miner_verbose
         miner.model_weight_store = w_grp
@@ -257,7 +257,7 @@ if __name__ == '__main__':
         with h5py.File(path.join(path.split(resp_path)[0], weight_file_name), "a") as weight_file:
             w_grp = weight_file.create_group(f"{your_model}_weights_shuffled")
             miner = Mine(miner_train_fraction, model_history, test_corr_thresh, False, False,
-                         taylor_look_ahead, 5)
+                         taylor_look_ahead, 5, fit_spikes=False)
             miner.n_epochs = fit_epochs
             miner.verbose = miner_verbose
             miner.model_weight_store = w_grp

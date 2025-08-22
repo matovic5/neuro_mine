@@ -68,7 +68,7 @@ class Mine:
     analysis function to be run on user-data
     """
     def __init__(self, train_fraction: float, model_history: int, corr_cut: float, compute_taylor: bool,
-                 return_jacobians: bool, taylor_look_ahead: int, taylor_pred_every: int):
+                 return_jacobians: bool, taylor_look_ahead: int, taylor_pred_every: int, fit_spikes: bool):
         """
         Create a new Mine object
         :param train_fraction: The fraction of frames to use for training 0 < train <= 1
@@ -78,6 +78,7 @@ class Mine:
         :param return_jacobians: If true, return the model jacobians at the data mean
         :param taylor_look_ahead: How many frames into the future to compute the taylor expansion (usually a few secs)
         :param taylor_pred_every: Every how many frames to compute the taylor expansion to save time
+        :param fit_spikes: If true, fit the spiking model
         """
         # Note 1: The ANN model purely looks into the past. However, the convolutional filters
         # can be centered arbitrarily by shifting predictor and response frames relative to
@@ -93,7 +94,7 @@ class Mine:
         # set following to true to return hessians -
         # Note memory requirements of (n_sample x (n_timepointsxn_predictors)^2) sized array
         self.return_hessians = False
-        # set the following to an hdf5 file our group object to store model-weights in subgroups labeled
+        # set the following to a hdf5 file our group object to store model-weights in subgroups labeled
         # according to "cell_{cell_index}_weights". These model-weights can be loaded into a list compatible
         # with tensorflow.keras.model.set_weights() using the utilities.modelweights_from_hdf5 function
         # NOTE: Before setting the weights, the model has to be initialized to the appropriate model structure
@@ -104,6 +105,7 @@ class Mine:
         self.taylor_pred_every = taylor_pred_every
         self.corr_cut = corr_cut
         self.verbose = True
+        self.fit_spikes = fit_spikes
 
     def analyze_data(self, pred_data: List[np.ndarray], response_data: np.ndarray) -> MineData:
         """
