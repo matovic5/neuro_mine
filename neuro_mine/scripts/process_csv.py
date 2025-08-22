@@ -294,7 +294,7 @@ if __name__ == '__main__':
             if mdata.model_lin_approx_scores[j] >= lax_thresh:
                 interpret_dict["Linearity"].append("linear")
             else:
-                if mdata.mean_exp_scores[j] >= sqr_thresh:
+                if mdata.model_2nd_approx_scores[j] >= sqr_thresh:
                     interpret_dict["Linearity"].append("quadratic")
                 else:
                     interpret_dict["Linearity"].append("cubic+")

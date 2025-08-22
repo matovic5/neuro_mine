@@ -8,19 +8,17 @@ import neuro_mine.scripts.utilities as utilities
 import neuro_mine.scripts.model as model
 from neuro_mine.scripts.taylorDecomp import taylor_decompose, d2ca_dr2, complexity_scores
 from dataclasses import dataclass
-
-
-@dataclass
-class MineData:
-    """Class for the return values of MINE"""
-    correlations_trained: np.ndarray
-    correlations_test: np.ndarray
+@dataclass(frozen=True)
+class _BaseData:
+    """
+    Class for shared MINE return values
+    """
     taylor_scores: Optional[np.ndarray]
     taylor_true_change: Optional[np.ndarray]
     taylor_full_prediction: Optional[np.ndarray]
     taylor_by_predictor: Optional[np.ndarray]
     model_lin_approx_scores: Optional[np.ndarray]
-    mean_exp_scores: Optional[np.ndarray]
+    model_2nd_approx_scores: Optional[np.ndarray]
     jacobians: Optional[np.ndarray]
     hessians: Optional[np.ndarray]
 
@@ -28,23 +26,40 @@ class MineData:
         """
         Saves all contents to a hdf5 file or group object
         :param file_object: The file/group to save to
-        :param overwrite: If true will overvwrite data in the file
+        :param overwrite: If true will overwrite data in the file
         """
-        utilities.create_overwrite(file_object, "correlations_trained", self.correlations_trained, overwrite)
-        utilities.create_overwrite(file_object, "correlations_test", self.correlations_test, overwrite)
         if self.taylor_scores is not None:
             utilities.create_overwrite(file_object, "taylor_scores", self.taylor_scores, overwrite)
             utilities.create_overwrite(file_object, "taylor_true_change", self.taylor_true_change, overwrite)
-            utilities.create_overwrite(file_object, "taylor_full_prediction", self.taylor_full_prediction, overwrite)
+            utilities.create_overwrite(file_object, "taylor_full_prediction", self.taylor_full_prediction,
+                                       overwrite)
             utilities.create_overwrite(file_object, "taylor_by_predictor", self.taylor_by_predictor, overwrite)
         if self.model_lin_approx_scores is not None:
-            utilities.create_overwrite(file_object, "model_lin_approx_scores", self.model_lin_approx_scores, overwrite)
-        if self.mean_exp_scores is not None:
-            utilities.create_overwrite(file_object, "me_scores", self.mean_exp_scores, overwrite)
+            utilities.create_overwrite(file_object, "model_lin_approx_scores", self.model_lin_approx_scores,
+                                       overwrite)
+        if self.model_2nd_approx_scores is not None:
+            utilities.create_overwrite(file_object, "model_2nd_approx_scores", self.model_2nd_approx_scores,
+                                       overwrite)
         if self.jacobians is not None:
             utilities.create_overwrite(file_object, "jacobians", self.jacobians, overwrite)
         if self.hessians is not None:
             utilities.create_overwrite(file_object, "hessians", self.hessians, overwrite)
+
+@dataclass(frozen=True)
+class MineData(_BaseData):
+    """Class for the return values of MINE"""
+    correlations_trained: np.ndarray
+    correlations_test: np.ndarray
+
+    def save_to_hdf5(self, file_object: Union[h5py.File, h5py.Group], overwrite=False) -> None:
+        """
+        Saves all contents to a hdf5 file or group object
+        :param file_object: The file/group to save to
+        :param overwrite: If true will overwrite data in the file
+        """
+        super().save_to_hdf5(file_object, overwrite)
+        utilities.create_overwrite(file_object, "correlations_trained", self.correlations_trained, overwrite)
+        utilities.create_overwrite(file_object, "correlations_test", self.correlations_test, overwrite)
 
 
 class Mine:
@@ -149,7 +164,7 @@ class Mine:
         m = model.get_standard_model(self.model_history, False)
         # the following is required to init variables at desired shape
         m(np.random.randn(1, self.model_history, len(data_obj.regressors)).astype(np.float32))
-        # save untrained weights to reinitalize model without having to recreate the class which somehow leaks memory
+        # save untrained weights to reinitialize model without having to recreate the class which somehow leaks memory
         init_weights = m.get_weights()
         for cell_ix in range(data_obj.ca_responses.shape[0]):
             tset = data_obj.training_data(cell_ix, batch_size=256)
@@ -245,7 +260,16 @@ class Mine:
                 taylor_true_change = np.nan
                 taylor_full_prediction = np.nan
                 taylor_by_pred = np.nan
-        return_data = MineData(correlations_trained, correlations_test, taylor_scores, taylor_true_change,
-                               taylor_full_prediction, taylor_by_pred, lin_approx_scores, me_scores, all_jacobians,
-                               all_hessians)
+        return_data = MineData(
+            correlations_test=correlations_test,
+            correlations_trained=correlations_trained,
+            taylor_scores=taylor_scores,
+            taylor_true_change=taylor_true_change,
+            taylor_full_prediction=taylor_full_prediction,
+            taylor_by_predictor=taylor_by_pred,
+            model_lin_approx_scores=lin_approx_scores,
+            model_2nd_approx_scores=me_scores,
+            jacobians=all_jacobians,
+            hessians=all_hessians
+        )
         return return_data
