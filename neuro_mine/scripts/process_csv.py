@@ -1,18 +1,17 @@
+import argparse
+from datetime import datetime
 from importlib.resources import open_text
-
+import json
 import pandas as pd
 import numpy as np
 from mine import Mine
 from utilities import safe_standardize
 import h5py
-import argparse
 import os
 from os import path
 from PyQt5.QtWidgets import QFileDialog, QApplication
 import upsetplot as ups
 import matplotlib.pyplot as pl
-import json
-from datetime import datetime
 
 
 class MineException(Exception):
