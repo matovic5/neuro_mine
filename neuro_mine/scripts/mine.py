@@ -9,6 +9,7 @@ import neuro_mine.scripts.model as model
 from neuro_mine.scripts.taylorDecomp import taylor_decompose, d2ca_dr2, complexity_scores
 from dataclasses import dataclass
 import warnings
+from sklearn.metrics import roc_auc_score
 
 @dataclass(frozen=True)
 class _BaseData:
@@ -164,16 +165,23 @@ class Mine:
         train_frames = int(self.train_fraction * res_len)
         n_predictors = len(pred_data)
 
-        correlations_trained = np.full(response_data.shape[0], np.nan)
-        correlations_test = correlations_trained.copy()
+        # define our score function
+        if self.fit_spikes:
+            # the spiking model returns log-probabilities by default, hence need to transform!
+            score_function = lambda predicted, real: roc_auc_score(real, utilities.sigmoid(predicted))
+        else:
+            score_function = lambda predicted, real: np.corrcoef(predicted, real)[0, 1]
+
+        scores_trained = np.full(response_data.shape[0], np.nan)
+        scores_test = scores_trained.copy()
         if self.compute_taylor:
             n_taylor = (n_predictors ** 2 - n_predictors) // 2 + n_predictors
             taylor_scores = np.full((response_data.shape[0], n_taylor, 2), np.nan)
             taylor_true_change = []
             taylor_full_prediction = []
             taylor_by_pred = []
-            lin_approx_scores = correlations_test.copy()
-            me_scores = correlations_test.copy()
+            lin_approx_scores = scores_test.copy()
+            me_scores = scores_test.copy()
         else:
             taylor_scores = None
             taylor_true_change = None
@@ -193,7 +201,7 @@ class Mine:
 
         data_obj = utilities.Data(self.model_history, pred_data, response_data, train_frames)
         # create model once
-        m = model.get_standard_model(self.model_history, False)
+        m = model.get_standard_model(self.model_history, self.fit_spikes)
         # the following is required to init variables at desired shape
         m(np.random.randn(1, self.model_history, len(data_obj.regressors)).astype(np.float32))
         # save untrained weights to reinitialize model without having to recreate the class which somehow leaks memory
@@ -212,17 +220,17 @@ class Mine:
                 utilities.modelweights_to_hdf5(w_group, m.get_weights())
             # evaluate
             p, r = data_obj.predict_response(cell_ix, m)
-            c_tr = np.corrcoef(p[:train_frames], r[:train_frames])[0, 1]
-            correlations_trained[cell_ix] = c_tr
-            c_ts = np.corrcoef(p[train_frames:], r[train_frames:])[0, 1]
-            correlations_test[cell_ix] = c_ts
-            # if the cell doesn't have a test correlation of at least corr_cut we skip the rest
+            c_tr = score_function(p[:train_frames], r[:train_frames])
+            scores_trained[cell_ix] = c_tr
+            c_ts = score_function(p[train_frames:], r[train_frames:])
+            scores_test[cell_ix] = c_ts
+            # if the cell doesn't have a test score of at least score_cut we skip the rest
             # NOTE: This means that some return values will only have one entry for each unit
             # that made the cut - the user will have to handle those cases
             if c_ts < self.score_cut or not np.isfinite(c_ts):
                 if self.verbose:
                     print(f"        Unit {cell_ix+1} out of {response_data.shape[0]} fit. "
-                          f"Test corr={correlations_test[cell_ix]} which was below cut-off.")
+                          f"Test score={scores_test[cell_ix]} which was below cut-off.")
                 continue
             # compute first and second order derivatives
             tset = data_obj.training_data(cell_ix, 256)
@@ -240,10 +248,19 @@ class Mine:
                 taylor_full_prediction.append(pc)
                 taylor_by_pred.append(by_pred)
                 # compute first and 2nd order model predictions
-                lin_score, o2_score = complexity_scores(m, x_bar, jacobian, hessian, regressors, self.taylor_pred_every)
+                # for spiking models these need to be computed in probability space not log-probability space
+                # since deviations at the extremes in log space do not carry the same wait as deviations close to 0
+                lin_score, o2_score = complexity_scores(m, x_bar, jacobian, hessian, regressors, self.taylor_pred_every,
+                                                        self.fit_spikes)
                 lin_approx_scores[cell_ix] = lin_score
                 me_scores[cell_ix] = o2_score
                 # compute our by-predictor taylor importance as the fractional loss of r2 when excluding the component
+                # for spiking models these need to be computed in probability space not log-probability space
+                # since deviations at the extremes in log space do not carry the same wait as deviations close to 0
+                if self.fit_spikes:
+                    true_change = utilities.sigmoid(true_change)
+                    pc = utilities.sigmoid(pc)
+                    by_pred = utilities.sigmoid(by_pred)
                 off_diag_index = 0
                 for row in range(n_predictors):
                     for column in range(n_predictors):
@@ -274,8 +291,7 @@ class Mine:
                     all_hessians[cell_ix, :, :] = hessian
             if self.verbose:
                 print(f"        Unit {cell_ix+1} out of {response_data.shape[0]} completed. "
-                      f"Test corr={correlations_test[cell_ix]}")
-        # convert nonlinearity metrics into probability if requested
+                      f"Test score={scores_test[cell_ix]}")
         if self.compute_taylor:
             # turn the taylor predictions into ndarrays unless no unit passed threshold
             if len(taylor_true_change) > 0:
@@ -292,16 +308,30 @@ class Mine:
                 taylor_true_change = np.nan
                 taylor_full_prediction = np.nan
                 taylor_by_pred = np.nan
-        return_data = MineData(
-            correlations_test=correlations_test,
-            correlations_trained=correlations_trained,
-            taylor_scores=taylor_scores,
-            taylor_true_change=taylor_true_change,
-            taylor_full_prediction=taylor_full_prediction,
-            taylor_by_predictor=taylor_by_pred,
-            model_lin_approx_scores=lin_approx_scores,
-            model_2nd_approx_scores=me_scores,
-            jacobians=all_jacobians,
-            hessians=all_hessians
-        )
+        if self.fit_spikes:
+            return_data = MineSpikingData(
+                roc_auc_test=scores_test,
+                roc_auc_trained=scores_trained,
+                taylor_scores=taylor_scores,
+                taylor_true_change=taylor_true_change,
+                taylor_full_prediction=taylor_full_prediction,
+                taylor_by_predictor=taylor_by_pred,
+                model_lin_approx_scores=lin_approx_scores,
+                model_2nd_approx_scores=me_scores,
+                jacobians=all_jacobians,
+                hessians=all_hessians
+            )
+        else:
+            return_data = MineData(
+                correlations_test=scores_test,
+                correlations_trained=scores_trained,
+                taylor_scores=taylor_scores,
+                taylor_true_change=taylor_true_change,
+                taylor_full_prediction=taylor_full_prediction,
+                taylor_by_predictor=taylor_by_pred,
+                model_lin_approx_scores=lin_approx_scores,
+                model_2nd_approx_scores=me_scores,
+                jacobians=all_jacobians,
+                hessians=all_hessians
+            )
         return return_data
