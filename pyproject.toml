@@ -13,15 +13,16 @@ authors = [
     {name = "Martin Haesemeyer", email = "haesemeyer.1@osu.edu"}
 ]
 dependencies = [
-    "h5py",
-    "matplotlib",
-    "numba",
-    "numpy",
-    "pandas",
-    "PyQt5",
-    "scipy",
+    "h5py==3.14.*",
+    "matplotlib==3.9.*",
+    "numba==0.60.*",
+    "numpy==1.26.*",
+    "pandas==2.3.*",
+    "PyQt5==5.15.*",
+    "scipy==1.13.*",
     "tensorflow<=2.15.1",
-    "upsetplot"
+    "upsetplot==0.9.*",
+    "scikit-learn==1.6.*"
 ]
 
 [project.urls]
