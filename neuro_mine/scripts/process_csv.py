@@ -43,6 +43,13 @@ default_options = {
 
 
 if __name__ == '__main__':
+    # TODO: For transition to allow spiking input data:
+    #   1) Need to auto-detect spiking data should be simple unless we want to allow anything but 0/1 coding of spikes
+    #   2) Need to adjust interpolation to avoid intermediate values and skipping spikes (how?)
+    #   3) Need to rename performance metrics in insights file (not R2 but ROC-AUC)
+    #   4) Need to remove safe standardization of responses!! MINE should ignore absence for spiking data
+    #   5) Need to make sure that Taylor analysis and nonlinearity analysis will work with ROC AUC
+
     app = QApplication([])
     # the following will prevent tensorflow from using the GPU - as the used models have very low complexity
     # they will generally be fit faster on the CPU - furthermore parallelization currently used
