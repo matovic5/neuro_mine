@@ -9,6 +9,7 @@ import tensorflow as tf
 import h5py
 from typing import Union, List, Any, Optional
 from numba import njit
+from warnings import warn
 
 
 def create_overwrite(storage: Union[h5py.File, h5py.Group], name: str, data: Any, overwrite: bool,
@@ -267,6 +268,39 @@ def modified_gram_schmidt(col_mat: np.ndarray) -> np.ndarray:
 
 def sigmoid(x):
     return 1/(1 + np.exp(-x))
+
+
+def interp_events(x: np.ndarray, xp: np.ndarray, fp: np.ndarray) -> np.ndarray:
+    """
+    Interpolate spiking trace adding spikes to the correct intervals without generating in-between values
+    :param x: The desired timepoints after interpolation
+    :param xp: The timepoints original timepoints
+    :param fp: The spike data before interpolation
+    """
+    if xp.size != fp.size:
+        raise ValueError(f"xp and fp must have the same size but sizes are {xp.size} and {fp.size}")
+    if x.min() < xp.min() or x.max() > xp.max():
+        warn("Trying to extrapolate spike data", UserWarning)
+    if not np.all(np.logical_or(fp==0, fp==1)):
+        raise ValueError("Values in fp suggest that this is not 0/1 coded spike data")
+    f = np.zeros_like(x)
+    for x_, f_ in zip(xp, fp):
+        # for each spike that is within the bounds of the interpolation time
+        # find the closest x to assign it to
+        if x_ < x.min():
+            continue
+        if x_ > x.max():
+            break
+        if f_ == 1:
+            ix = np.argmin(np.abs(x - x_))
+            if ix.size > 1:
+                ix = ix[0]
+            f[ix] += 1
+    if np.any(f > 1):
+        print(f"Interpolation times too coarse for data. {np.sum(f > 1)} timepoints in interpolated data correspond to"
+              f" more than one spike")
+    f[f > 1] = 1
+    return f
 
 
 class Data:
