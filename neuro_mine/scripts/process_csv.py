@@ -5,7 +5,7 @@ import json
 import pandas as pd
 import numpy as np
 from mine import Mine
-from utilities import safe_standardize
+from utilities import safe_standardize, interp_events
 import h5py
 import os
 from os import path
@@ -230,7 +230,8 @@ if __name__ == '__main__':
         ip_resp_data = np.hstack(
             [np.interp(ip_time, resp_times[valid_resp], rd[valid_resp])[:, None] for rd in resp_data.T])
     else:
-        raise NotImplementedError("Can't interpolate spike data the standard way")
+        ip_resp_data = np.hstack(
+            [interp_events(ip_time, resp_times[valid_resp], rd[valid_resp])[:, None] for rd in resp_data.T])
 
     if time_as_pred == "Y":
         mine_pred = [safe_standardize(ipd) for ipd in ip_pred_data.T]
