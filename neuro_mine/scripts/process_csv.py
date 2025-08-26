@@ -216,6 +216,8 @@ if __name__ == '__main__':
     pred_times = pred_data[:, 0]
     resp_times = resp_data[:, 0]
 
+    # define interpolation time as the timespan covered in both files at the rate in the file with fewer timepoints
+    # within that timespan (i.e. we bin to the lower resolution instead of interpolating to the higher resolution)
     max_allowed_time = min([pred_times.max(), resp_times.max()])
     valid_pred = pred_times <= max_allowed_time
     valid_resp = resp_times <= max_allowed_time
@@ -224,6 +226,7 @@ if __name__ == '__main__':
     else:
         ip_time = resp_times[valid_resp]
 
+    # perform interpolation
     ip_pred_data = np.hstack(
         [np.interp(ip_time, pred_times[valid_pred], pd[valid_pred])[:, None] for pd in pred_data.T])
     if not is_spike_data:
@@ -233,11 +236,11 @@ if __name__ == '__main__':
         ip_resp_data = np.hstack(
             [interp_events(ip_time, resp_times[valid_resp], rd[valid_resp])[:, None] for rd in resp_data.T])
 
+    # perform data-appropriate standardization of predictors and responses
     if time_as_pred == "Y":
         mine_pred = [safe_standardize(ipd) for ipd in ip_pred_data.T]
     else:
         mine_pred = [safe_standardize(ipd) for ipd in ip_pred_data.T[1:]]
-
     # In the following the first column is removed since it is time
     if not is_spike_data:
         mine_resp = safe_standardize(ip_resp_data[:, 1:]).T
