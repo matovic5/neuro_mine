@@ -1,18 +1,20 @@
 import argparse
+import csv
 from datetime import datetime
-from importlib.resources import open_text
-import json
-import pandas as pd
-import numpy as np
-from mine import Mine
-from utilities import safe_standardize, interp_events
 import h5py
+from importlib.resources import open_text
+from io import StringIO
+import json
+import matplotlib.pyplot as pl
+from mine import Mine
+import numpy as np
 import os
 from os import path
+import pandas as pd
 from PyQt5.QtWidgets import QFileDialog, QApplication
+import re
 import upsetplot as ups
-import matplotlib.pyplot as pl
-
+from utilities import safe_standardize, interp_events
 
 class MineException(Exception):
     def __init__(self, message):
@@ -169,42 +171,40 @@ if __name__ == '__main__':
     with open(f"MINE_{your_model}_run_config.json", 'w') as config_file:
         json.dump(configuration, config_file, indent=2)
 
+
     ###
     # Load and process data
     ###
-    pred_data = None
-    resp_data = None
-    resp_header = np.genfromtxt(resp_path, delimiter=",", max_rows=1, dtype=str)
+    def find_delimiter(filename):
+        sniffer = csv.Sniffer()
+        with open(filename) as fp:
+            delimiter = sniffer.sniff(fp.read(-1)).delimiter
+        return delimiter
 
-    try:
-        resp_header.astype(float)
-        resp_data = np.genfromtxt(resp_path, delimiter=",", skip_header=0)
-        resp_has_header = False
-    except ValueError:
-        resp_data = np.genfromtxt(resp_path, delimiter=",", skip_header=1)
-        resp_has_header = True
 
-    # We use a very simple heuristic to detect spiking data and we will not allow for mixed data. In other words
-    # a response file either contains all continuous data or all spiking data. When in doubt, we will treat as
-    # continuous
-    if np.all(np.logical_or(resp_data==0, resp_data==1)):
-        is_spike_data = True
-        print("Responses are assumed to contain spikes")
-    else:
-        is_spike_data = False
-        print("Responses are assumed to be continuous")
+    def load_data(path, delimiter):
+        with open(path, "r") as f:
+            lines = f.readlines()
+        skip = 0
+        for line in lines:
+            parts = line.strip().split(delimiter)
+            try:
+                [float(x) for x in parts if x != ""]
+                break
+            except ValueError:
+                skip += 1
+        from io import StringIO
+        numeric_part = "".join(lines[skip:])
+        data = np.genfromtxt(StringIO(numeric_part), delimiter=delimiter)
+        data_has_header = skip > 0
+        return data, data_has_header
 
-    pred_header = np.genfromtxt(pred_path, delimiter=",", max_rows=1, dtype=str)
+    pred_delimiter = find_delimiter(pred_path)
+    resp_delimiter = find_delimiter(resp_path)
+    resp_data, resp_has_header = load_data(resp_path, resp_delimiter)
+    pred_data, pred_has_header = load_data(pred_path, pred_delimiter)
 
-    no_pred_header = False
-
-    try:
-        pred_header.astype(float)
-        no_pred_header = True
-    except ValueError:
-        pred_data = np.genfromtxt(pred_path, delimiter=",", skip_header=1)
-
-    if no_pred_header:
+    if pred_has_header:
         # Without the header we will not proceed
         app.quit()
         del app
