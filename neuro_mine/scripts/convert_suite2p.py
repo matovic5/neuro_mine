@@ -37,6 +37,8 @@ if __name__ == '__main__':
     val_dirs = [d for d in plane_dirs if path.exists(path.join(d, "ops.npy"))]
 
     if len(val_dirs) == 0:
+        app.quit()
+        del app
         raise ValueError("Directory does not seem to be valid suite2p output."
                          "No subdirectories with output files found.")
 
@@ -69,3 +71,6 @@ if __name__ == '__main__':
         full_data = pd.DataFrame(data=full_data, columns=col_names)
 
         full_data.to_csv(path.join(vd, "Neuron_data.csv"), index=False)
+
+    app.quit()
+    del app
