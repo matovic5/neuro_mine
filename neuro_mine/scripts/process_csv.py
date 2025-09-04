@@ -180,29 +180,82 @@ if __name__ == '__main__':
         return delimiter
 
 
-    def load_data(path, delimiter):
+    def load_data(path, delimiter, datetime_fmt="%H:%M:%S.%f"):
         with open(path, "r") as f:
             lines = f.readlines()
+
         skip = 0
+        header_row = None
+        ncols = None
+
         for line in lines:
             parts = line.strip().split(delimiter)
             try:
-                [float(x) for x in parts if x != ""]
+                _ = datetime.strptime(parts[0], datetime_fmt)
+                [float(x) for x in parts[1:] if x != ""]
+                ncols = len(parts)
                 break
-            except ValueError:
-                skip += 1
-        from io import StringIO
-        numeric_part = "".join(lines[skip:])
-        data = np.genfromtxt(StringIO(numeric_part), delimiter=delimiter)
-        data_has_header = skip > 0
-        return data, data_has_header
+            except Exception:
+                try:
+                    [float(x) for x in parts if x != ""]
+                    ncols = len(parts)
+                    break
+                except ValueError:
+                    skip += 1
+
+        if skip > 0 and ncols is not None:
+            for i in range(skip - 1, -1, -1):
+                parts = lines[i].strip().split(delimiter)
+                if len(parts) == ncols:
+                    header_row = parts
+                    break
+
+        numeric_part = [line.strip().split(delimiter) for line in lines[skip:]]
+        numeric_part = [row for row in numeric_part if len(row) == ncols]
+
+        data = []
+        first_is_datetime = False
+        try:
+            datetime.strptime(numeric_part[0][0], datetime_fmt)
+            first_is_datetime = True
+        except Exception:
+            pass
+
+        data = []
+        if first_is_datetime:
+            # Use relative seconds from the first entry
+            t0 = datetime.strptime(numeric_part[0][0], datetime_fmt)
+            for row in numeric_part:
+                t = datetime.strptime(row[0], datetime_fmt)
+                ts = (t - t0).total_seconds()  # <-- relative seconds
+                rest = [float(x) if x != "" else np.nan for x in row[1:]]
+                data.append([ts] + rest)
+        else:
+            for row in numeric_part:
+                data.append([float(x) if x != "" else np.nan for x in row])
+
+        data = np.array(data, dtype=float)
+        data_has_header = header_row is not None
+
+        return data, data_has_header, header_row
 
     pred_delimiter = find_delimiter(pred_path)
     resp_delimiter = find_delimiter(resp_path)
-    resp_data, resp_has_header = load_data(resp_path, resp_delimiter)
-    pred_data, pred_has_header = load_data(pred_path, pred_delimiter)
+    resp_data, resp_has_header, resp_header = load_data(resp_path, resp_delimiter)
+    pred_data, pred_has_header, pred_header = load_data(pred_path, pred_delimiter)
 
-    if pred_has_header:
+    # We use a very simple heuristic to detect spiking data and we will not allow for mixed data. In other words
+    # a response file either contains all continuous data or all spiking data. When in doubt, we will treat as
+    # continuous
+    if np.all(np.logical_or(resp_data==0, resp_data==1)):
+        is_spike_data = True
+        print("Responses are assumed to contain spikes")
+    else:
+        is_spike_data = False
+        print("Responses are assumed to be continuous")
+
+
+    if pred_has_header == False:
         # Without the header we will not proceed
         app.quit()
         del app
