@@ -44,8 +44,6 @@ default_options = {
 
 
 if __name__ == '__main__':
-    # TODO: For transition to allow spiking input data:
-    #   2) Need to adjust interpolation to avoid intermediate values and skipping spikes (how?)
 
     app = QApplication([])
     # the following will prevent tensorflow from using the GPU - as the used models have very low complexity
