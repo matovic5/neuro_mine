@@ -1,6 +1,7 @@
 import argparse
 import csv
 from datetime import datetime
+from dateutil import parser
 import h5py
 from importlib.resources import open_text
 from io import StringIO
@@ -79,7 +80,7 @@ if __name__ == '__main__':
                           type=float, default=default_options['history'])
     a_parser.add_argument("-tl", "--taylor_look", help="Determines taylor look ahead as multiplier of history",
                           type=float, default=default_options['taylor_look'])
-    a_parser.add_argument("-j", "--jacobian", help="Store the Jacobians (linear receptive fields) for each neuron.",
+    a_parser.add_argument("-j", "--jacobian", help="Store the Jacobians (linear receptive fields) for each response.",
                           action='store_true')
     a_parser.add_argument("-o", "--config", help="Path to config file with run parameters.", type=str)
 
@@ -179,23 +180,33 @@ if __name__ == '__main__':
             delimiter = sniffer.sniff(fp.read(-1)).delimiter
         return delimiter
 
+    def parse_datetime(s):
+        try:
+            return parser.parse(s)
+        except (ValueError, OverflowError):
+            return None
 
-    def load_data(path, delimiter, datetime_fmt="%H:%M:%S.%f"):
+    def load_data(path, delimiter, col_name: str = "col"):
         with open(path, "r") as f:
             lines = f.readlines()
 
         skip = 0
-        header_row = None
         ncols = None
+        header_row = None  # ensure it's always defined
 
+        # Detect where numeric data starts
         for line in lines:
             parts = line.strip().split(delimiter)
-            try:
-                _ = datetime.strptime(parts[0], datetime_fmt)
-                [float(x) for x in parts[1:] if x != ""]
-                ncols = len(parts)
-                break
-            except Exception:
+            first_col = parse_datetime(parts[0])
+
+            if first_col is not None:  # datetime in first column
+                try:
+                    [float(x) for x in parts[1:] if x != ""]
+                    ncols = len(parts)
+                    break
+                except ValueError:
+                    skip += 1
+            else:  # try full row as floats
                 try:
                     [float(x) for x in parts if x != ""]
                     ncols = len(parts)
@@ -214,20 +225,14 @@ if __name__ == '__main__':
         numeric_part = [row for row in numeric_part if len(row) == ncols]
 
         data = []
-        first_is_datetime = False
-        try:
-            datetime.strptime(numeric_part[0][0], datetime_fmt)
-            first_is_datetime = True
-        except Exception:
-            pass
+        first_val = parse_datetime(numeric_part[0][0])
+        first_is_datetime = first_val is not None
 
-        data = []
         if first_is_datetime:
-            # Use relative seconds from the first entry
-            t0 = datetime.strptime(numeric_part[0][0], datetime_fmt)
+            t0 = first_val
             for row in numeric_part:
-                t = datetime.strptime(row[0], datetime_fmt)
-                ts = (t - t0).total_seconds()  # <-- relative seconds
+                t = parse_datetime(row[0])
+                ts = (t - t0).total_seconds()
                 rest = [float(x) if x != "" else np.nan for x in row[1:]]
                 data.append([ts] + rest)
         else:
@@ -237,12 +242,19 @@ if __name__ == '__main__':
         data = np.array(data, dtype=float)
         data_has_header = header_row is not None
 
-        return data, data_has_header, header_row
+        if data_has_header:
+            data_header = header_row
+        else:
+            ncols = data.shape[1]
+            data_header = [f"{col_name}_{i}" for i in range(ncols)]
+
+        return data, data_has_header, data_header
+
 
     pred_delimiter = find_delimiter(pred_path)
     resp_delimiter = find_delimiter(resp_path)
-    resp_data, resp_has_header, resp_header = load_data(resp_path, resp_delimiter)
-    pred_data, pred_has_header, pred_header = load_data(pred_path, pred_delimiter)
+    resp_data, resp_has_header, resp_header = load_data(resp_path, resp_delimiter, "R")
+    pred_data, pred_has_header, pred_header = load_data(pred_path, pred_delimiter, "P")
 
     # We use a very simple heuristic to detect spiking data and we will not allow for mixed data. In other words
     # a response file either contains all continuous data or all spiking data. When in doubt, we will treat as
@@ -253,13 +265,6 @@ if __name__ == '__main__':
     else:
         is_spike_data = False
         print("Responses are assumed to be continuous")
-
-
-    if pred_has_header == False:
-        # Without the header we will not proceed
-        app.quit()
-        del app
-        raise MineException("Please add a descriptive header text to your predictor file; make sure that 'time' is the 1st column")
 
     pred_time = np.nanmax(pred_data, axis=0)[0]
     resp_time = np.nanmax(resp_data, axis=0)[0]
@@ -350,20 +355,19 @@ if __name__ == '__main__':
     ###
     model_scores = mdata.roc_auc_test if is_spike_data else mdata.correlations_test
     predictor_columns = pred_header if time_as_pred == 'Y' else pred_header[1:]
-    interpret_dict = {"Neuron": [], "Fit": []} | {ph: [] for ph in predictor_columns} | {"Linearity": []}
+    interpret_dict = {"Response": [], "Fit": []} | {ph: [] for ph in predictor_columns} | {"Linearity": []}
     interpret_name = f"MINE_{your_model}_Insights.csv"
     n_objects = model_scores.size
     # for taylor analysis (which predictors are important) compute our significance levels based on a) user input
-    # and b) the number of neurons above threshold which gives the multiple-comparison correction - bonferroni
+    # and b) the number of responses above threshold which gives the multiple-comparison correction - bonferroni
     min_significance = 1 - taylor_sig / np.sum(model_scores >= test_score_thresh)
     normal_quantiles_by_sigma = np.array([0.682689492137, 0.954499736104, 0.997300203937, 0.999936657516,
                                           0.999999426697, 0.999999998027])
     n_sigma = np.where((min_significance - normal_quantiles_by_sigma) < 0)[0][0] + 1
 
     for j in range(n_objects):
-        neuron = j if not resp_has_header else resp_header[
-            j + 1]  # because resp_header still contains the first "time" column
-        interpret_dict["Neuron"].append(neuron)
+        response = resp_header[j + 1]  # because resp_header still contains the first "time" column
+        interpret_dict["Response"].append(response)
         fit = model_scores[j] > test_score_thresh
         interpret_dict["Fit"].append("Y" if fit else "N")
         if not fit:
@@ -386,7 +390,7 @@ if __name__ == '__main__':
     interpret_df = pd.DataFrame(interpret_dict)
     interpret_df.to_csv(path.join(path.split(resp_path)[0], interpret_name), index=False)
 
-    # save Jacobians: One CSV file for each predictor, containing the Jacobians for each neuron
+    # save Jacobians: One CSV file for each predictor, containing the Jacobians for each response
     # column headers will be the time delay relative to t=0, since our modeling is set up
     # such that convolutions are restricted to the past (hence model_history)
     def time_from_index(ix: int) -> float:
@@ -395,14 +399,13 @@ if __name__ == '__main__':
 
     if fit_jacobian:
         for i, pc in enumerate(predictor_columns):
-            jac_dict = {"Neuron": []} | {f"{time_from_index(t)}": [] for t in range(model_history)}
+            jac_dict = {"Response": []} | {f"{time_from_index(t)}": [] for t in range(model_history)}
             jac_file_name = f"MINE_{your_model}_ReceptiveFields_{pc}.csv"
             for j in range(n_objects):
                 if np.any(np.isnan(mdata.jacobians[j, :])):
                     continue
-                neuron = j if not resp_has_header else resp_header[
-                    j + 1]  # because resp_header still contains the first "time" column
-                jac_dict["Neuron"].append(neuron)
+                response = resp_header[j + 1]  # because resp_header still contains the first "time" column
+                jac_dict["Response"].append(response)
                 # index out the predictor related receptive field
                 rf = mdata.jacobians[j, i*model_history:(i+1)*model_history]
                 for t in range(model_history):
