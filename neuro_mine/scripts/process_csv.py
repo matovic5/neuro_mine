@@ -12,7 +12,6 @@ import numpy as np
 import os
 from os import path
 import pandas as pd
-from PyQt5.QtWidgets import QFileDialog, QApplication
 import re
 import upsetplot as ups
 from utilities import safe_standardize, interp_events
@@ -46,7 +45,6 @@ default_options = {
 
 if __name__ == '__main__':
 
-    app = QApplication([])
     # the following will prevent tensorflow from using the GPU - as the used models have very low complexity
     # they will generally be fit faster on the CPU - furthermore parallelization currently used
     # will not work if tensorflow is run on the GPU!!
@@ -55,8 +53,8 @@ if __name__ == '__main__':
     a_parser = argparse.ArgumentParser(prog="process_csv.py",
                                        description="Uses MINE to fit and interpret CNN models that relate predictors"
                                                    "identified by one CSV file to responses identified by another.")
-    a_parser.add_argument("-p", "--predictors", help="Path to CSV file of predictors.", type=str)
-    a_parser.add_argument("-r", "--responses", help="Path to CSV file of responses.", type=str)
+    a_parser.add_argument("-p", "--predictors", help="Path to CSV file of predictors.", type=str, required=True)
+    a_parser.add_argument("-r", "--responses", help="Path to CSV file of responses.", type=str, required=True)
     a_parser.add_argument("-ut", "--use_time", help="If set time will be used as one predictor.",
                           action='store_true')
     a_parser.add_argument("-sh", "--run_shuffle", help="If set shuffled controls will be run as well.",
@@ -82,26 +80,12 @@ if __name__ == '__main__':
                           type=float, default=default_options['taylor_look'])
     a_parser.add_argument("-j", "--jacobian", help="Store the Jacobians (linear receptive fields) for each response.",
                           action='store_true')
-    a_parser.add_argument("-o", "--config", help="Path to config file with run parameters.", type=str)
+    a_parser.add_argument("-o", "--config", help="Path to config file with run parameters.", type=str, default=None)
 
     args = a_parser.parse_args()
 
     resp_path = args.responses
-    if resp_path is None:
-        resp_path = QFileDialog.getOpenFileName(filter="CSV (*.csv)", caption="Select response file",
-                                                options=QFileDialog.DontUseNativeDialog)[0]
-        if resp_path == "":
-            app.quit()
-            del app
-            raise MineException("No response file selected")
     pred_path = args.predictors
-    if pred_path is None:
-        pred_path = QFileDialog.getOpenFileName(filter="CSV (*.csv)", caption="Select predictor file",
-                                                options=QFileDialog.DontUseNativeDialog)[0]
-        if pred_path == "":
-            app.quit()
-            del app
-            raise MineException("No predictor file selected")
 
     config_dict = None
     if args.config is not None:
