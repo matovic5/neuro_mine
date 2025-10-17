@@ -22,7 +22,8 @@ dependencies = [
     "scipy==1.13.*",
     "tensorflow<=2.15.1",
     "upsetplot==0.9.*",
-    "scikit-learn==1.6.*"
+    "scikit-learn==1.6.*",
+    "pyside6==6.10.*"
 ]
 
 [project.urls]
