@@ -5,6 +5,7 @@ from PySide6.QtWidgets import QApplication, QWidget, QFileDialog, QLineEdit, QCh
 from neuro_mine.ui.ui_form import Ui_Widget
 import subprocess
 import sys
+from process_csv import default_options
 
 class MyApp(QWidget, Ui_Widget):
     def __init__(self):
@@ -13,12 +14,12 @@ class MyApp(QWidget, Ui_Widget):
 
         now = datetime.datetime.now().strftime("%B_%d_%Y_%I_%M%p")
         self.lineEdit.setText(now) # Model Name
-        self.lineEdit_3.setText("0.2236068") # Test Score Threshold
-        self.lineEdit_5.setText("0.05") # Taylor Expansion Significance Threshold
-        self.lineEdit_6.setText("0.1") # Fit Variance Fraction
-        self.lineEdit_7.setText("0.8")  # Linear Fit Variance Fraction
-        self.lineEdit_8.setText("0.5") # Square Fit Variance Fraction
-        self.lineEdit_9.setText("10.0") # Model History
+        self.lineEdit_3.setText(str(default_options["th_test"])) # Test Score Threshold
+        self.lineEdit_5.setText(str(default_options["taylor_sig"])) # Taylor Expansion Significance Threshold
+        self.lineEdit_6.setText(str(default_options["taylor_cut"])) # Taylor Cutoff
+        self.lineEdit_7.setText(str(default_options["th_lax"]))  # Linear Fit Variance explained cutoff
+        self.lineEdit_8.setText(str(default_options["th_sqr"])) # Square Fit Variance explained cutoff
+        self.lineEdit_9.setText(str(default_options["history"])) # Model History [s]
 
         # connect signals
         self.pushButton.clicked.connect(self.on_run_clicked)
