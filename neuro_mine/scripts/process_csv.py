@@ -412,7 +412,3 @@ if __name__ == '__main__':
     axes_dict = up_set.plot(fig)
     axes_dict['intersections'].set_yscale('log')
     fig.savefig(path.join(path.split(resp_path)[0], f"MINE_{your_model}_BarcodeUpsetPlot.pdf"))
-
-    # finally quit qt app
-    app.quit()
-    del app
