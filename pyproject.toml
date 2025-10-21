@@ -30,3 +30,4 @@ Homepage = "https://github.com/matovic5/neuro_mine"
 
 [project.scripts]
 Mine = "neuro_mine.main:main"
+Mine-gui = "neuro_mine.main:main_gui"

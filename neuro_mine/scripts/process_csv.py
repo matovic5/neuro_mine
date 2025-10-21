@@ -80,7 +80,10 @@ if __name__ == '__main__':
                           type=float, default=default_options['taylor_look'])
     a_parser.add_argument("-j", "--jacobian", help="Store the Jacobians (linear receptive fields) for each response.",
                           action='store_true')
-    a_parser.add_argument("-o", "--config", help="Path to config file with run parameters.", type=str, default=None)
+    a_parser.add_argument("-o", "--config", help="Path to config file with run parameters.", type=str, default=None),
+    a_parser.add_argument("-e", "--n_epochs", help="Number of epochs when fitting model.", type=float),
+    a_parser.add_argument("-mv","--miner_verbose", help="Receive updates on model fitting in command line"),
+    a_parser.add_argument("-mtf", "--miner_train_fraction", help="The fraction of data to use for training")
 
     args = a_parser.parse_args()
 
