@@ -234,11 +234,11 @@ class MyApp(QWidget, Ui_Widget):
                 args.extend(["--jacobian"])
             if config:
                 args.extend(["--config", config])
-            if config:
+            if n_epochs:
                 args.extend(["--n_epochs", n_epochs])
-            if config:
-                args.extend(["--miner_verbose", miner_verbose])
-            if config:
+            if miner_verbose:
+                args.extend(["--miner_verbose"])
+            if miner_train_fraction:
                 args.extend(["--miner_train_fraction", miner_train_fraction])
 
             subprocess.run(args)

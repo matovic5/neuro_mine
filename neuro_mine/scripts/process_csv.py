@@ -38,7 +38,7 @@ default_options = {
     "taylor_look": 0.5,
     "jacobian": False,
     "n_epochs": 100,
-    "miner_verbose": True,
+    "miner_verbose": False,
     "miner_train_fraction": 2.0/3
 }
 
@@ -80,10 +80,13 @@ if __name__ == '__main__':
                           type=float, default=default_options['taylor_look'])
     a_parser.add_argument("-j", "--jacobian", help="Store the Jacobians (linear receptive fields) for each response.",
                           action='store_true')
-    a_parser.add_argument("-o", "--config", help="Path to config file with run parameters.", type=str, default=None),
-    a_parser.add_argument("-e", "--n_epochs", help="Number of epochs when fitting model.", type=float),
-    a_parser.add_argument("-mv","--miner_verbose", help="Receive updates on model fitting in command line"),
-    a_parser.add_argument("-mtf", "--miner_train_fraction", help="The fraction of data to use for training")
+    a_parser.add_argument("-o", "--config", help="Path to config file with run parameters.", type=str, default=None)
+    a_parser.add_argument("-e", "--n_epochs", help="Number of epochs when fitting model.", type=int,
+                          default=default_options['n_epochs'])
+    a_parser.add_argument("-mv","--miner_verbose", help="Receive updates on model fitting in command line",
+                          action='store_true')
+    a_parser.add_argument("-mtf", "--miner_train_fraction", help="The fraction of data to use for training",
+                          type=float, default=default_options['miner_train_fraction'])
 
     args = a_parser.parse_args()
 
@@ -117,16 +120,15 @@ if __name__ == '__main__':
     history_time = config_dict["history"] if np.isclose(args.history, default_options["history"]) else args.history
     taylor_look_fraction = config_dict["taylor_look"] if np.isclose(args.taylor_look, default_options["taylor_look"]) else args.taylor_look
     fit_jacobian = config_dict["jacobian"] if args.jacobian == default_options["jacobian"] else args.jacobian
+    fit_epochs = config_dict["n_epochs"] if args.n_epochs == default_options["n_epochs"] else args.n_epochs
+    miner_train_fraction = config_dict["miner_train_fraction"] if args.miner_train_fraction == default_options["miner_train_fraction"] else args.miner_train_fraction
+    miner_verbose = config_dict["miner_verbose"] if args.miner_verbose == default_options["miner_verbose"] else args.miner_verbose
 
     if args.model_name is None:
         # set to default to file name of predictors
         your_model = path.splitext(path.split(resp_path)[-1])[0]
     else:
         your_model = args.model_name
-
-    fit_epochs = config_dict["n_epochs"]
-    miner_verbose = config_dict["miner_verbose"]
-    miner_train_fraction = config_dict["miner_train_fraction"]
 
     # save configuration used as json file
     configuration = {
