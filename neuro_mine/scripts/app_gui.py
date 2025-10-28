@@ -2,6 +2,7 @@ import datetime
 import importlib.resources
 import json
 from PySide6.QtCore import QProcess
+from PySide6.QtGui import QPalette, QColor
 from PySide6.QtWidgets import QApplication, QWidget, QFileDialog, QLineEdit, QCheckBox, QMessageBox
 from neuro_mine.ui.ui_form import Ui_Widget
 import os
@@ -38,7 +39,27 @@ class MyApp(QWidget, Ui_Widget):
         self.pushButton_5.clicked.connect(self.clear_form)
         self.pushButton_6.clicked.connect(self.save_to_json)
 
+        # connect field validation
+        self.valid_fields = {}
+        for le, minv, maxv in [
+            (self.lineEdit_3, 0, 1),
+            (self.lineEdit_5, 0, 1),
+            (self.lineEdit_11, 0.00000001, 3.999999999),
+            (self.lineEdit_6, 0, 1),
+            (self.lineEdit_7, 0, 1),
+            (self.lineEdit_8, 0, 1),
+            (self.lineEdit_9, 1, None),
+            (self.lineEdit_12, 0, 100),
+            (self.lineEdit_13, 0, 1)
+        ]:
+            le.editingFinished.connect(lambda le=le, minv=minv, maxv=maxv: self.validate_range(le, minv, maxv))
+
         self.last_dir = ""
+
+        self.lineEdit_4.textChanged.connect(self.update_button_states)
+        self.lineEdit_2.textChanged.connect(self.update_button_states)
+
+        self.update_button_states()
 
     def browse_file(self, target_lineedit, file_type, file_filter):
         file_path, _ = QFileDialog.getOpenFileName(
@@ -126,6 +147,42 @@ class MyApp(QWidget, Ui_Widget):
         self.checkBox_3.setChecked(data.get("miner_verbose", default_options["miner_verbose"]))
         self.lineEdit_13.setText(str(data.get("miner_train_fraction", default_options["miner_train_fraction"])))
 
+    def validate_range(self, line_edit, min_val, max_val):
+        text = line_edit.text().strip()
+
+        try:
+            value = float(text)
+            if min_val <= value <= max_val:
+                line_edit.setPalette(self.style().standardPalette())
+                self.valid_fields[line_edit.objectName()] = True
+            else:
+                palette = line_edit.palette()
+                palette.setColor(QPalette.Base, QColor("crimson"))
+                line_edit.setPalette(palette)
+                self.valid_fields[line_edit.objectName()] = False
+        except ValueError:
+            palette = line_edit.palette()
+            palette.setColor(QPalette.Base, QColor("crimson"))
+            line_edit.setPalette(palette)
+            self.valid_fields[line_edit.objectName()] = False
+
+        self.update_button_states()
+
+    def update_button_states(self):
+        # Check all range validations
+        all_valid = all(self.valid_fields.values())
+
+        # Check that the required fields have *non-empty trimmed* text
+        line4_filled = bool(self.lineEdit_4.text().strip())
+        line2_filled = bool(self.lineEdit_2.text().strip())
+        required_fields_filled = line4_filled and line2_filled
+
+        # ✅ Run button depends on both being valid *and* filled
+        self.pushButton.setEnabled(all_valid and required_fields_filled)
+
+        # ✅ pushButton_6 only cares about range validity
+        self.pushButton_6.setEnabled(all_valid)
+
     def on_run_clicked(self):
 
         model_name = self.lineEdit.text()
@@ -156,9 +213,9 @@ class MyApp(QWidget, Ui_Widget):
             if responses:
                 args.extend(["--responses", responses])
             if use_time:
-                args.extend(["--use_time", use_time])
+                args.extend(["--use_time"])
             if run_shuffle:
-                args.extend(["--run_shuffle", run_shuffle])
+                args.extend(["--run_shuffle"])
             if th_test:
                 args.extend(["--th_test", th_test])
             if taylor_sig:
@@ -174,7 +231,7 @@ class MyApp(QWidget, Ui_Widget):
             if taylor_look:
                 args.extend(["--taylor_look", taylor_look])
             if jacobian:
-                args.extend(["--jacobian", jacobian])
+                args.extend(["--jacobian"])
             if config:
                 args.extend(["--config", config])
             if config:
