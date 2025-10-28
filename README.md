@@ -2,6 +2,14 @@
 
 Welcome to MINE: your handy companion for processing neuronal response data! This program allows users to use MINE to train a flexible convolutional neural network (CNN) to analyze experimental datasets containing neural activity and corresponding predictors (e.g., behavioral responses).
 
+*Application:*
+<br>- Any model organism
+<br>- Any type of predictor data (stimuli and/or behavior)
+<br>- Any type of response data (imaging or spikes)
+
+*Limitation:*
+<br>- Data must be continuous in time, and time must be monotonically increasing (i.e., any discontinuity between epochs must be resolved prior to fitting)
+
 *Authors:*
 <br>Dr. Martin Haesemeyer
 <br>Jamie Costabile
@@ -41,23 +49,13 @@ pip install neuro_mine
 [4] Run program
 
 ```bash
-Mine
+Mine-gui
 ```
 ** to see possible command line prompts to customize the model, run the command:
 ```bash
 Mine --help
 ```
 
-[5] Follow dialog prompts to select predictors and response .csv files. These files must have the following structure:
-<br>- .csv file format
+.csv File Requirements:
 <br>- Predictor data **must** have time as the first column and it must be named 'time'; for optimal outputs, predictor columns should be meaningfully labelled (e.g., 'temperature' or 'left_paw') in the header
 <br>- Reponse data **must** have time as the first column and the responses must be in adjacent columns; column titles (a header) are supported but are not mandatory
-
-*Application:*
-<br>- Any model organism
-<br>- Any type of predictor data (stimuli and/or behavior)
-<br>- Any type of response data (imaging or spikes)
-
-
-*Limitation:*
-<br>- Data must be continuous in time, and time must be monotonically increasing (i.e., any discontinuity between epochs must be resolved prior to fitting)
