@@ -190,8 +190,9 @@ if __name__ == '__main__':
     # define interpolation time as the timespan covered in both files at the rate in the file with fewer timepoints
     # within that timespan (i.e. we bin to the lower resolution instead of interpolating to the higher resolution)
     max_allowed_time = min([pred_times.max(), resp_times.max()])
-    valid_pred = pred_times <= max_allowed_time
-    valid_resp = resp_times <= max_allowed_time
+    min_allowed_time = max([pred_times.min(), resp_times.min()])
+    valid_pred = np.logical_and(pred_times <= max_allowed_time, pred_times >= min_allowed_time)
+    valid_resp = np.logical_and(resp_times <= max_allowed_time, resp_times >= min_allowed_time)
     if np.sum(valid_pred) < np.sum(valid_resp):
         ip_time = pred_times[valid_pred]
     else:
