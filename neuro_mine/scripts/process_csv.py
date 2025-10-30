@@ -213,7 +213,7 @@ if __name__ == '__main__':
     # Save interpolated data with chosen column names
     df_ip_resp_data = pd.DataFrame(ip_resp_data, columns=resp_header)
     df_ip_resp_data.to_csv(path.join(output_folder, f"MINE_{your_model}_interpolated_responses.csv"), index=False)
-    df_ip_pred_data = pd.DataFrame(ip_resp_data, columns=pred_header)
+    df_ip_pred_data = pd.DataFrame(ip_pred_data, columns=pred_header)
     df_ip_pred_data.to_csv(path.join(output_folder, f"MINE_{your_model}_interpolated_predictors.csv"), index=False)
 
     # perform data-appropriate standardization of predictors and responses
