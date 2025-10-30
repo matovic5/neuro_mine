@@ -193,10 +193,11 @@ if __name__ == '__main__':
     min_allowed_time = max([pred_times.min(), resp_times.min()])
     valid_pred = np.logical_and(pred_times <= max_allowed_time, pred_times >= min_allowed_time)
     valid_resp = np.logical_and(resp_times <= max_allowed_time, resp_times >= min_allowed_time)
+    # define interpolation time based on the less dense data ensuring equal timesteps
     if np.sum(valid_pred) < np.sum(valid_resp):
-        ip_time = pred_times[valid_pred]
+        ip_time = np.linspace(min_allowed_time, max_allowed_time, np.sum(valid_pred))
     else:
-        ip_time = resp_times[valid_resp]
+        ip_time = np.linspace(min_allowed_time, max_allowed_time, np.sum(valid_resp))
 
     # perform interpolation
     ip_pred_data = np.hstack(
