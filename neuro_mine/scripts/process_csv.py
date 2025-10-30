@@ -128,7 +128,7 @@ if __name__ == '__main__':
     else:
         your_model = args.model_name
 
-    # save configuration used as json file
+    # save run information and configuration used as json file which we set up here
     configuration = {
         "config":
             {
@@ -168,9 +168,6 @@ if __name__ == '__main__':
     if not path.exists(output_folder):
         os.makedirs(output_folder)
 
-    with open(path.join(output_folder, f"MINE_{your_model}_run_config.json"), 'w') as config_file:
-        json.dump(configuration, config_file, indent=2)
-
     # We use a very simple heuristic to detect spiking data and we will not allow for mixed data. In other words
     # a response file either contains all continuous data or all spiking data. When in doubt, we will treat as
     # continuous
@@ -198,6 +195,10 @@ if __name__ == '__main__':
         ip_time = np.linspace(min_allowed_time, max_allowed_time, np.sum(valid_pred))
     else:
         ip_time = np.linspace(min_allowed_time, max_allowed_time, np.sum(valid_resp))
+
+    configuration["run"]["interpolation_time_delta"] = np.mean(np.diff(ip_time))
+    with open(path.join(output_folder, f"MINE_{your_model}_run_config.json"), 'w') as config_file:
+        json.dump(configuration, config_file, indent=2)
 
     # perform interpolation
     ip_pred_data = np.hstack(
