@@ -124,7 +124,7 @@ if __name__ == '__main__':
 
     if args.model_name is None:
         # set to default to file name of predictors
-        your_model = path.splitext(path.split(resp_path)[-1])[0]
+        your_model = datetime.now().strftime("%B_%d_%Y_%I_%M%p")
     else:
         your_model = args.model_name
 
