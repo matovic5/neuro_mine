@@ -1,11 +1,11 @@
 import argparse
-
 from datetime import datetime
 from processing import process_file_pair
 import json
 import numpy as np
 import os
 from os import path
+import file_handling as fh
 
 class MineException(Exception):
     def __init__(self, message):
@@ -44,8 +44,12 @@ if __name__ == '__main__':
     a_parser = argparse.ArgumentParser(prog="process_csv.py",
                                        description="Uses MINE to fit and interpret CNN models that relate predictors"
                                                    "identified by one CSV file to responses identified by another.")
-    a_parser.add_argument("-p", "--predictors", help="Path to CSV file of predictors.", type=str, required=True)
-    a_parser.add_argument("-r", "--responses", help="Path to CSV file of responses.", type=str, required=True)
+    a_parser.add_argument("-p", "--predictors", help="Path to CSV files of predictors or alternatively "
+                                                     "directory with predictor files.",
+                          type=str, required=True, nargs='+')
+    a_parser.add_argument("-r", "--responses", help="Path to CSV files of responses or alternatively "
+                                                    "directory with response files.",
+                          type=str, required=True, nargs='+')
     a_parser.add_argument("-ut", "--use_time", help="If set time will be used as one predictor.",
                           action='store_true')
     a_parser.add_argument("-sh", "--run_shuffle", help="If set shuffled controls will be run as well.",
@@ -81,8 +85,10 @@ if __name__ == '__main__':
 
     args = a_parser.parse_args()
 
-    resp_path = args.responses
-    pred_path = args.predictors
+    r_paths = fh.process_file_args(args.responses)
+    p_paths = fh.process_file_args(args.predictors)
+
+    file_pairs = fh.pair_files(r_paths, p_paths)
 
     config_dict = None
     if args.config is not None:
@@ -121,35 +127,36 @@ if __name__ == '__main__':
     else:
         your_model = args.model_name
 
-    # save run information and configuration used as json file which we set up here
-    configuration = {
-        "config":
-            {
-                "use_time": time_as_pred,
-                "run_shuffle": run_shuffle,
-                "th_test": test_score_thresh,
-                "taylor_sig": taylor_sig,
-                "taylor_cut": taylor_cutoff,
-                "th_lax": lax_thresh,
-                "th_sqr": sqr_thresh,
-                "history": history_time,
-                "taylor_look": taylor_look_fraction,
-                "jacobian": fit_jacobian,
-                "n_epochs": fit_epochs,
-                "miner_verbose": miner_verbose,
-                "miner_train_fraction": miner_train_fraction
-            },
-        "run":
-            {
-                "model_name": your_model,
-                "predictor_file": pred_path,
-                "response_file": resp_path,
-                "timestamp": datetime.now().now().isoformat(),
-            }
-    }
+    for i, pair in enumerate(file_pairs):
+        # save run information and configuration used as json file which we set up here
+        configuration = {
+            "config":
+                {
+                    "use_time": time_as_pred,
+                    "run_shuffle": run_shuffle,
+                    "th_test": test_score_thresh,
+                    "taylor_sig": taylor_sig,
+                    "taylor_cut": taylor_cutoff,
+                    "th_lax": lax_thresh,
+                    "th_sqr": sqr_thresh,
+                    "history": history_time,
+                    "taylor_look": taylor_look_fraction,
+                    "jacobian": fit_jacobian,
+                    "n_epochs": fit_epochs,
+                    "miner_verbose": miner_verbose,
+                    "miner_train_fraction": miner_train_fraction
+                },
+            "run":
+                {
+                    "model_name": your_model if len(file_pairs)==1 else f"{your_model}_{i}",
+                    "predictor_file": pair[1],
+                    "response_file": pair[0],
+                    "timestamp": datetime.now().now().isoformat(),
+                }
+        }
 
 
-    ###
-    # Load and process data
-    ###
-    process_file_pair(resp_path, pred_path, configuration)
+        ###
+        # Load and process data
+        ###
+        process_file_pair(pair[0], pair[1], configuration)

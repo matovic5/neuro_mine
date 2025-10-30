@@ -3,7 +3,46 @@ from dateutil import parser as dateparser
 import numpy as np
 from os import path
 from datetime import datetime, date, time
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Union
+import os
+
+
+def process_file_args(files_or_dir: List[str]) -> List[str]:
+    """
+    Processes file arguments, expanding directories if present
+    :param files_or_dir: Path to file or directory or list of paths to files
+    :return: List of file paths
+    """
+    # Note: We allow lists of files or a single file or a single directory but not lists containing directories
+    if len(files_or_dir) == 1:
+        if path.isdir(files_or_dir[0]):
+            elements = os.listdir(files_or_dir[0])
+            return [path.join(files_or_dir[0], e) for e in elements if path.isfile(path.join(files_or_dir[0], e))]
+        elif path.isfile(files_or_dir[0]):
+            return [files_or_dir[0]]
+        else:
+            raise ValueError("Unrecognized path: {}".format(files_or_dir))
+    for f in files_or_dir:
+        if not path.isfile(f):
+            raise ValueError(f"{f} is not a path to a file. Note that if multiple arguments "
+                             "are provided they have to be files")
+    return files_or_dir
+
+
+def pair_files(resp_files: List[str], pred_files: List[str]) -> List[Tuple[str, str]]:
+    """
+    Takes a list of response files and predictor files, matches them and then returns a list of matched tuples
+    :param resp_files: List of response files
+    :param pred_files: List of predictor files
+    :return: Matched pairs
+    """
+    # At this moment we perform an extremely simple matching: We assume that the alphabetical order of predictor
+    # and response files is the same
+    if len(resp_files) != len(pred_files):
+        raise ValueError(f"Cannot match {len(pred_files)} predictor files to {len(resp_files)} response files")
+    resp_files = sorted(resp_files)
+    pred_files = sorted(pred_files)
+    return [(r, p) for r,p in zip(resp_files, pred_files)]
 
 
 class FileParser:
