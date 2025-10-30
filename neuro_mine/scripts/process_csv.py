@@ -1,10 +1,8 @@
 import argparse
-import csv
+
 from datetime import datetime
-from dateutil import parser
+
 import h5py
-from importlib.resources import open_text
-from io import StringIO
 import json
 import matplotlib.pyplot as pl
 from mine import Mine
@@ -12,9 +10,9 @@ import numpy as np
 import os
 from os import path
 import pandas as pd
-import re
 import upsetplot as ups
 from utilities import safe_standardize, interp_events
+import file_handling as fh
 
 class MineException(Exception):
     def __init__(self, message):
@@ -163,87 +161,9 @@ if __name__ == '__main__':
     ###
     # Load and process data
     ###
-    def find_delimiter(filename):
-        sniffer = csv.Sniffer()
-        with open(filename) as fp:
-            delimiter = sniffer.sniff(fp.read(-1)).delimiter
-        return delimiter
 
-    def parse_datetime(s):
-        try:
-            return parser.parse(s)
-        except (ValueError, OverflowError):
-            return None
-
-    def load_data(path, delimiter, col_name: str = "col"):
-        with open(path, "r") as f:
-            lines = f.readlines()
-
-        skip = 0
-        ncols = None
-        header_row = None  # ensure it's always defined
-
-        # Detect where numeric data starts
-        for line in lines:
-            parts = line.strip().split(delimiter)
-            first_col = parse_datetime(parts[0])
-
-            if first_col is not None:  # datetime in first column
-                try:
-                    [float(x) for x in parts[1:] if x != ""]
-                    ncols = len(parts)
-                    break
-                except ValueError:
-                    skip += 1
-            else:  # try full row as floats
-                try:
-                    [float(x) for x in parts if x != ""]
-                    ncols = len(parts)
-                    break
-                except ValueError:
-                    skip += 1
-
-        if skip > 0 and ncols is not None:
-            for i in range(skip - 1, -1, -1):
-                parts = lines[i].strip().split(delimiter)
-                if len(parts) == ncols:
-                    header_row = parts
-                    break
-
-        numeric_part = [line.strip().split(delimiter) for line in lines[skip:]]
-        numeric_part = [row for row in numeric_part if len(row) == ncols]
-
-        data = []
-        first_val = parse_datetime(numeric_part[0][0])
-        first_is_datetime = first_val is not None
-
-        if first_is_datetime:
-            t0 = first_val
-            for row in numeric_part:
-                t = parse_datetime(row[0])
-                ts = (t - t0).total_seconds()
-                rest = [float(x) if x != "" else np.nan for x in row[1:]]
-                data.append([ts] + rest)
-        else:
-            for row in numeric_part:
-                data.append([float(x) if x != "" else np.nan for x in row])
-
-        data = np.array(data, dtype=float)
-        data_has_header = header_row is not None
-
-        if data_has_header:
-            data_header = header_row
-        else:
-            ncols = data.shape[1]
-            data_header = [f"{col_name}_{i}" for i in range(ncols)]
-
-        return data, data_has_header, data_header
-
-
-    pred_delimiter = find_delimiter(pred_path)
-    resp_delimiter = find_delimiter(resp_path)
-    resp_data, resp_has_header, resp_header = load_data(resp_path, resp_delimiter, "R")
-    pred_data, pred_has_header, pred_header = load_data(pred_path, pred_delimiter, "P")
+    resp_data, resp_has_header, resp_header = fh.CSVParser(resp_path, "R").load_data()
+    pred_data, pred_has_header, pred_header = fh.CSVParser(pred_path, "P").load_data()
 
     # We use a very simple heuristic to detect spiking data and we will not allow for mixed data. In other words
     # a response file either contains all continuous data or all spiking data. When in doubt, we will treat as
@@ -253,7 +173,7 @@ if __name__ == '__main__':
         print("Responses are assumed to contain spikes")
     else:
         is_spike_data = False
-        print("Responses are assumed to be continuous")
+        print("Responses are assumed to be continuous values not spikes")
 
     pred_time = np.nanmax(pred_data, axis=0)[0]
     resp_time = np.nanmax(resp_data, axis=0)[0]
