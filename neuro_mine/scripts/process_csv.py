@@ -154,8 +154,6 @@ if __name__ == '__main__':
                 "timestamp": datetime.now().now().isoformat(),
             }
     }
-    with open(f"MINE_{your_model}_run_config.json", 'w') as config_file:
-        json.dump(configuration, config_file, indent=2)
 
 
     ###
@@ -164,6 +162,14 @@ if __name__ == '__main__':
 
     resp_data, resp_has_header, resp_header = fh.CSVParser(resp_path, "R").load_data()
     pred_data, pred_has_header, pred_header = fh.CSVParser(pred_path, "P").load_data()
+
+    # store all output file in a sub-folder of the response file folder
+    output_folder = path.join(path.split(resp_path)[0], "output")
+    if not path.exists(output_folder):
+        os.makedirs(output_folder)
+
+    with open(path.join(output_folder, f"MINE_{your_model}_run_config.json"), 'w') as config_file:
+        json.dump(configuration, config_file, indent=2)
 
     # We use a very simple heuristic to detect spiking data and we will not allow for mixed data. In other words
     # a response file either contains all continuous data or all spiking data. When in doubt, we will treat as
@@ -230,7 +236,7 @@ if __name__ == '__main__':
     mdata_shuff = None
 
     weight_file_name = f"MINE_{your_model}_weights.hdf5"
-    with h5py.File(path.join(path.split(resp_path)[0], weight_file_name), "w") as weight_file:
+    with h5py.File(path.join(output_folder, weight_file_name), "w") as weight_file:
         w_grp = weight_file.create_group(f"{your_model}_weights")
         miner = Mine(miner_train_fraction, model_history, test_score_thresh, True, fit_jacobian,
                      taylor_look_ahead, 5, fit_spikes=is_spike_data)
@@ -242,7 +248,7 @@ if __name__ == '__main__':
     # rotate mine_resp on user request and re-fit without computing any Taylor just to get test correlations
     if run_shuffle:
         mine_resp_shuff = np.roll(mine_resp, mine_resp.shape[1] // 2, axis=1)
-        with h5py.File(path.join(path.split(resp_path)[0], weight_file_name), "a") as weight_file:
+        with h5py.File(path.join(output_folder, weight_file_name), "a") as weight_file:
             w_grp = weight_file.create_group(f"{your_model}_weights_shuffled")
             miner = Mine(miner_train_fraction, model_history, test_score_thresh, False, False,
                          taylor_look_ahead, 5, fit_spikes=is_spike_data)
@@ -252,7 +258,7 @@ if __name__ == '__main__':
             mdata_shuff = miner.analyze_data(mine_pred, mine_resp_shuff)
 
     full_ana_file_name = f"MINE_{your_model}_analysis.hdf5"
-    with h5py.File(path.join(path.split(resp_path)[0], full_ana_file_name), "w") as ana_file:
+    with h5py.File(path.join(output_folder, full_ana_file_name), "w") as ana_file:
         ana_grp = ana_file.create_group(f"analysis")
         mdata.save_to_hdf5(ana_grp)
         if mdata_shuff is not None:
@@ -297,7 +303,7 @@ if __name__ == '__main__':
                 taylor_is_sig = taylor_mean - n_sigma * taylor_std - taylor_cutoff
                 interpret_dict[pc].append("Y" if taylor_is_sig > 0 else "N")
     interpret_df = pd.DataFrame(interpret_dict)
-    interpret_df.to_csv(path.join(path.split(resp_path)[0], interpret_name), index=False)
+    interpret_df.to_csv(path.join(output_folder, interpret_name), index=False)
 
     # save Jacobians: One CSV file for each predictor, containing the Jacobians for each response
     # column headers will be the time delay relative to t=0, since our modeling is set up
@@ -320,7 +326,7 @@ if __name__ == '__main__':
                 for t in range(model_history):
                     jac_dict[f"{time_from_index(t)}"].append(rf[t])
             df_jac = pd.DataFrame(jac_dict)
-            df_jac.to_csv(path.join(path.split(resp_path)[0], jac_file_name), index=False)
+            df_jac.to_csv(path.join(output_folder, jac_file_name), index=False)
 
 
 
@@ -336,4 +342,4 @@ if __name__ == '__main__':
                        sort_categories_by=None)
     axes_dict = up_set.plot(fig)
     axes_dict['intersections'].set_yscale('log')
-    fig.savefig(path.join(path.split(resp_path)[0], f"MINE_{your_model}_BarcodeUpsetPlot.pdf"))
+    fig.savefig(path.join(output_folder, f"MINE_{your_model}_BarcodeUpsetPlot.pdf"))
