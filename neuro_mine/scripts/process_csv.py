@@ -210,6 +210,12 @@ if __name__ == '__main__':
         ip_resp_data = np.hstack(
             [interp_events(ip_time, resp_times[valid_resp], rd[valid_resp])[:, None] for rd in resp_data.T])
 
+    # Save interpolated data with chosen column names
+    df_ip_resp_data = pd.DataFrame(ip_resp_data, columns=resp_header)
+    df_ip_resp_data.to_csv(path.join(output_folder, f"MINE_{your_model}_interpolated_responses.csv"), index=False)
+    df_ip_pred_data = pd.DataFrame(ip_resp_data, columns=pred_header)
+    df_ip_pred_data.to_csv(path.join(output_folder, f"MINE_{your_model}_interpolated_predictors.csv"), index=False)
+
     # perform data-appropriate standardization of predictors and responses
     if time_as_pred == "Y":
         mine_pred = [safe_standardize(ipd) for ipd in ip_pred_data.T]
