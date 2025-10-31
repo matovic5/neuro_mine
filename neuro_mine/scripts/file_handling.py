@@ -17,7 +17,7 @@ def process_file_args(files_or_dir: List[str]) -> List[str]:
     if len(files_or_dir) == 1:
         if path.isdir(files_or_dir[0]):
             elements = os.listdir(files_or_dir[0])
-            return [path.join(files_or_dir[0], e) for e in elements if path.isfile(path.join(files_or_dir[0], e))]
+            return [path.join(files_or_dir[0], e) for e in elements if path.isfile(path.join(files_or_dir[0], e)) and not e[0]=='.']
         elif path.isfile(files_or_dir[0]):
             return [files_or_dir[0]]
         else:
