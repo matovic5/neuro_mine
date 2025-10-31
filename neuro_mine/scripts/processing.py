@@ -202,7 +202,45 @@ def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
             df_jac = pd.DataFrame(jac_dict)
             df_jac.to_csv(path.join(output_folder, jac_file_name), index=False)
 
+    # if shuffles were calculated plot fraction of above threshold units in data and shuffle
+    # versus correlation threshold levels
+    if run_shuffle:
+        shuffle_scores = mdata_shuff.roc_auc_test if is_spike_data else mdata_shuff.correlations_test
+        fig, axes = pl.subplots(nrows=2)
+        c_thresholds = np.linspace(0, 1)
+        ab_real = np.full_like(c_thresholds, np.nan)
+        ab_shuff = np.full_like(c_thresholds, np.nan)
+        for i, ct in enumerate(c_thresholds):
+            ab_real[i] = np.sum(model_scores > ct) / n_objects
+            ab_shuff[i] = np.sum(shuffle_scores > ct) / n_objects
+        enrichment = ab_real / ab_shuff
+        axes[0].plot(c_thresholds, ab_real, label="Real data")
+        axes[0].plot(c_thresholds, ab_shuff, label="Shuffled data")
+        axes[0].plot([test_score_thresh, test_score_thresh], [0, 1], 'k--', label="Threshold")
+        metric_label = "ROC AUC" if is_spike_data else "Correlation"
+        axes[0].set_xlabel(f"Test {metric_label} cutoff")
+        axes[0].set_ylabel("Fraction above threshold")
+        axes[0].set_ylim(0, 1)
+        axes[0].set_xlim(0, 1)
+        axes[0].legend()
+        axes[1].plot(c_thresholds, enrichment)
+        axes[1].plot([test_score_thresh, test_score_thresh], [np.nanmin(enrichment), np.nanmax(enrichment)], 'k--')
+        axes[1].set_xlim(0, 1)
+        axes[1].set_xlabel(f"Test {metric_label} cutoff")
+        axes[1].set_ylabel("Enrichment over shuffle")
+        fig.tight_layout()
+        fig.savefig(path.join(output_folder, f"MINE_{your_model}_TestMetrics.pdf"))
 
+    # plot linearity metrics and thresholds
+    fig = pl.figure()
+    pl.scatter(mdata.model_lin_approx_scores, mdata.model_2nd_approx_scores, s=2)
+    pl.plot([lax_thresh, lax_thresh], [-1, 1], 'k--')
+    pl.plot([-1, 1], [sqr_thresh, sqr_thresh], 'k--')
+    pl.xlim(-1, 1)
+    pl.ylim(-1, 1)
+    pl.xlabel("Linear approximation $R^2$")
+    pl.ylabel("2nd order approximation $R^2$")
+    fig.savefig(path.join(output_folder, f"MINE_{your_model}_LinearityMetrics.pdf"))
 
     # perform barcode clustering
     interpret_df = interpret_df[interpret_df["Fit"] == "Y"]
