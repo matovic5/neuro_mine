@@ -61,10 +61,6 @@ def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
     else:
         ip_time = np.linspace(min_allowed_time, max_allowed_time, np.sum(valid_resp))
 
-    configuration["run"]["interpolation_time_delta"] = np.mean(np.diff(ip_time))
-    with open(path.join(output_folder, f"MINE_{your_model}_run_config.json"), 'w') as config_file:
-        json.dump(configuration, config_file, indent=2)
-
     # perform interpolation
     ip_pred_data = np.hstack(
         [np.interp(ip_time, pred_times[valid_pred], pd[valid_pred])[:, None] for pd in pred_data.T])
@@ -91,6 +87,12 @@ def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
         mine_resp = safe_standardize(ip_resp_data[:, 1:]).T
     else:
         mine_resp = ip_resp_data[:, 1:].T
+
+    configuration["run"]["interpolation_time_delta"] = np.mean(np.diff(ip_time))
+    configuration["run"]["is_spike_data"] = is_spike_data
+    configuration["run"]["n_predictors"] = len(mine_pred)
+    with open(path.join(output_folder, f"MINE_{your_model}_run_config.json"), 'w') as config_file:
+        json.dump(configuration, config_file, indent=2)
 
     # compute our "frame rate", i.e. frames per time-unit on the interpolated scale
     ip_rate = 1 / np.mean(np.diff(ip_time))
