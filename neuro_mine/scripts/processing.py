@@ -120,6 +120,10 @@ def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
         miner.verbose = miner_verbose
         miner.model_weight_store = w_grp
         mdata = miner.analyze_data(mine_pred, mine_resp)
+        # save neuron names
+        name_grp = weight_file.create_group("response_names")
+        for i, r in enumerate(resp_header[1:]):  # first entry is "Time"
+            name_grp.create_dataset(f"{i}", data=r.encode('utf-8'))
 
     # rotate mine_resp on user request and re-fit without computing any Taylor just to get test correlations
     if run_shuffle:
