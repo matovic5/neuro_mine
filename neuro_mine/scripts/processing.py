@@ -113,7 +113,7 @@ def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
 
     weight_file_name = f"MINE_{your_model}_weights.hdf5"
     with h5py.File(path.join(output_folder, weight_file_name), "w") as weight_file:
-        w_grp = weight_file.create_group(f"{your_model}_weights")
+        w_grp = weight_file.create_group("fit")
         miner = Mine(miner_train_fraction, model_history, test_score_thresh, True, fit_jacobian,
                      taylor_look_ahead, 5, fit_spikes=is_spike_data)
         miner.n_epochs = fit_epochs
@@ -125,7 +125,7 @@ def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
     if run_shuffle:
         mine_resp_shuff = np.roll(mine_resp, mine_resp.shape[1] // 2, axis=1)
         with h5py.File(path.join(output_folder, weight_file_name), "a") as weight_file:
-            w_grp = weight_file.create_group(f"{your_model}_weights_shuffled")
+            w_grp = weight_file.create_group("fit_shuffled")
             miner = Mine(miner_train_fraction, model_history, test_score_thresh, False, False,
                          taylor_look_ahead, 5, fit_spikes=is_spike_data)
             miner.n_epochs = fit_epochs
@@ -135,10 +135,10 @@ def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
 
     full_ana_file_name = f"MINE_{your_model}_analysis.hdf5"
     with h5py.File(path.join(output_folder, full_ana_file_name), "w") as ana_file:
-        ana_grp = ana_file.create_group(f"analysis")
+        ana_grp = ana_file.create_group("analysis")
         mdata.save_to_hdf5(ana_grp)
         if mdata_shuff is not None:
-            ana_grp = ana_file.create_group(f"analysis_shuffled")
+            ana_grp = ana_file.create_group("analysis_shuffled")
             mdata_shuff.save_to_hdf5(ana_grp)
 
     ###
