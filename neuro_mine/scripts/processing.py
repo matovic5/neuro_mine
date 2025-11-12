@@ -192,7 +192,7 @@ def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
         ix_corr = ix - model_history + 1  # at model history is timepoint 0
         return ip_rate * ix_corr
 
-    if fit_jacobian:
+    if fit_jacobian and np.any(model_scores >= test_score_thresh):
         for i, pc in enumerate(predictor_columns):
             jac_dict = {"Response": []} | {f"{time_from_index(t)}": [] for t in range(model_history)}
             jac_file_name = f"MINE_{your_model}_ReceptiveFields_{pc}.csv"
@@ -238,29 +238,30 @@ def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
         fig.savefig(path.join(output_folder, f"MINE_{your_model}_TestMetrics.pdf"))
 
     # plot linearity metrics and thresholds
-    fig = pl.figure()
-    pl.scatter(mdata.model_lin_approx_scores, mdata.model_2nd_approx_scores, s=2)
-    pl.plot([lax_thresh, lax_thresh], [-1, 1], 'k--')
-    pl.plot([-1, 1], [sqr_thresh, sqr_thresh], 'k--')
-    pl.xlim(-1, 1)
-    pl.ylim(-1, 1)
-    pl.xlabel("Linear approximation $R^2$")
-    pl.ylabel("2nd order approximation $R^2$")
-    fig.savefig(path.join(output_folder, f"MINE_{your_model}_LinearityMetrics.pdf"))
+    if np.any(model_scores >= test_score_thresh):
+        fig = pl.figure()
+        pl.scatter(mdata.model_lin_approx_scores, mdata.model_2nd_approx_scores, s=2)
+        pl.plot([lax_thresh, lax_thresh], [-1, 1], 'k--')
+        pl.plot([-1, 1], [sqr_thresh, sqr_thresh], 'k--')
+        pl.xlim(-1, 1)
+        pl.ylim(-1, 1)
+        pl.xlabel("Linear approximation $R^2$")
+        pl.ylabel("2nd order approximation $R^2$")
+        fig.savefig(path.join(output_folder, f"MINE_{your_model}_LinearityMetrics.pdf"))
 
-    # perform barcode clustering
-    interpret_df = interpret_df[interpret_df["Fit"] == "Y"]
-    barcode_labels = [ph for ph in predictor_columns] + ["Nonlinear"]
-    barcode = np.hstack([(np.array(interpret_df[ph])=="Y")[:, None] for ph in predictor_columns])
-    barcode = np.c_[barcode, (np.array(interpret_df["Linearity"])!="linear")[:, None]]
-    df_barcode = pd.DataFrame(barcode, columns=barcode_labels)
-    aggregate = ups.from_indicators(df_barcode)
-    fig = pl.figure()
-    up_set = ups.UpSet(aggregate, subset_size='count', min_subset_size=1, facecolor="C1", sort_by='cardinality',
-                       sort_categories_by=None)
-    axes_dict = up_set.plot(fig)
-    axes_dict['intersections'].set_yscale('log')
-    fig.savefig(path.join(output_folder, f"MINE_{your_model}_BarcodeUpsetPlot.pdf"))
+        # perform barcode clustering
+        interpret_df = interpret_df[interpret_df["Fit"] == "Y"]
+        barcode_labels = [ph for ph in predictor_columns] + ["Nonlinear"]
+        barcode = np.hstack([(np.array(interpret_df[ph])=="Y")[:, None] for ph in predictor_columns])
+        barcode = np.c_[barcode, (np.array(interpret_df["Linearity"])!="linear")[:, None]]
+        df_barcode = pd.DataFrame(barcode, columns=barcode_labels)
+        aggregate = ups.from_indicators(df_barcode)
+        fig = pl.figure()
+        up_set = ups.UpSet(aggregate, subset_size='count', min_subset_size=1, facecolor="C1", sort_by='cardinality',
+                           sort_categories_by=None)
+        axes_dict = up_set.plot(fig)
+        axes_dict['intersections'].set_yscale('log')
+        fig.savefig(path.join(output_folder, f"MINE_{your_model}_BarcodeUpsetPlot.pdf"))
 
 
 if __name__ == '__main__':
