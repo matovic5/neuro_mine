@@ -14,6 +14,7 @@ class MyApp(QWidget, Ui_Widget):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+        self.default_options = default_options
 
         now = datetime.datetime.now().strftime("%B_%d_%Y_%I_%M%p")
         self.lineEdit.setText(now) # Model Name
@@ -29,14 +30,14 @@ class MyApp(QWidget, Ui_Widget):
         self.lineEdit_9.setText(str(default_options["history"])) # Model History [s]
         self.lineEdit_12.setText(str(default_options["n_epochs"])) # Number of Epochs
         self.lineEdit_13.setText(str(default_options["miner_train_fraction"])) # Fraction of Data to use to Train
-        self.checkBox_3.setChecked(default_options["miner_verbose"]) # Verbose Fitting Updates
+        self.checkBox_3.setChecked(True) # Verbose Fitting Updates
 
         # connect signals
         self.pushButton.clicked.connect(self.on_run_clicked)
         self.pushButton_2.clicked.connect(lambda: self.browse_file(self.lineEdit_4, "Predictor", "*.csv"))
         self.pushButton_3.clicked.connect(lambda: self.browse_file(self.lineEdit_2, "Response", "*.csv"))
         self.pushButton_4.clicked.connect(lambda: self.handle_json_browse(self.lineEdit_10))
-        self.pushButton_5.clicked.connect(self.clear_form)
+        self.pushButton_5.clicked.connect(self.restore_defaults)
         self.pushButton_6.clicked.connect(self.save_to_json)
 
         # connect field validation
@@ -48,7 +49,7 @@ class MyApp(QWidget, Ui_Widget):
             (self.lineEdit_6, 0, 1),
             (self.lineEdit_7, 0, 1),
             (self.lineEdit_8, 0, 1),
-            (self.lineEdit_9, 1, None),
+            (self.lineEdit_9, 1.0, None),
             (self.lineEdit_12, 0, 100),
             (self.lineEdit_13, 0, 1)
         ]:
@@ -72,11 +73,16 @@ class MyApp(QWidget, Ui_Widget):
         if file_path:
             target_lineedit.setText(file_path)
 
-    def clear_form(self):
-        for line_edit in self.findChildren(QLineEdit):
-            line_edit.clear()
-        for checkbox in self.findChildren(QCheckBox):
-            checkbox.setChecked(False)
+    def populate_presets(self):
+        for attr, value in default_options["line_edits"].items():
+            widget = getattr(self, attr, None)
+            if isinstance(widget, QLineEdit):
+                widget.setText(value)
+
+        for attr, value in default_options["check_boxes"].items():
+            widget = getattr(self, attr, None)
+            if isinstance(widget, QCheckBox):
+                widget.setChecked(value)
 
     def save_to_json(self):
         data = {
@@ -169,19 +175,55 @@ class MyApp(QWidget, Ui_Widget):
         self.update_button_states()
 
     def update_button_states(self):
-        # Check all range validations
         all_valid = all(self.valid_fields.values())
 
-        # Check that the required fields have *non-empty trimmed* text
         line4_filled = bool(self.lineEdit_4.text().strip())
         line2_filled = bool(self.lineEdit_2.text().strip())
         required_fields_filled = line4_filled and line2_filled
 
-        # ✅ Run button depends on both being valid *and* filled
         self.pushButton.setEnabled(all_valid and required_fields_filled)
 
-        # ✅ pushButton_6 only cares about range validity
         self.pushButton_6.setEnabled(all_valid)
+
+    def restore_defaults(self):
+        """Restore UI elements to their default preset values."""
+        global default_options
+
+        self.checkBox.setChecked(default_options["use_time"])
+        self.checkBox_2.setChecked(default_options["run_shuffle"])
+        self.lineEdit_3.setText(str(default_options["th_test"]))
+        self.lineEdit_5.setText(str(default_options["taylor_sig"]))
+        self.lineEdit_11.setText(str(default_options["taylor_look"]))
+        self.lineEdit_6.setText(str(default_options["taylor_cut"]))
+        self.lineEdit_7.setText(str(default_options["th_lax"]))
+        self.lineEdit_8.setText(str(default_options["th_sqr"]))
+        self.checkBox_4.setChecked(default_options["jacobian"])
+        self.lineEdit_9.setText(str(default_options["history"]))
+        self.lineEdit_12.setText(str(default_options["n_epochs"]))
+        self.lineEdit_13.setText(str(default_options["miner_train_fraction"]))
+        self.checkBox_3.setChecked(True)
+
+        self.reset_validation_state()
+
+    def reset_validation_state(self):
+        """Resets line edit colors and re-enables buttons after restoring defaults."""
+        for widget in [self.lineEdit_3, self.lineEdit_5, self.lineEdit_11,
+                       self.lineEdit_6, self.lineEdit_7, self.lineEdit_8,
+                       self.lineEdit_9, self.lineEdit_12, self.lineEdit_13]:
+            widget.setPalette(self.style().standardPalette())
+
+        for le, minv, maxv in [
+            (self.lineEdit_3, 0, 1),
+            (self.lineEdit_5, 0, 1),
+            (self.lineEdit_11, 0.00000001, 3.999999999),
+            (self.lineEdit_6, 0, 1),
+            (self.lineEdit_7, 0, 1),
+            (self.lineEdit_8, 0, 1),
+            (self.lineEdit_9, 1.0, None),
+            (self.lineEdit_12, 0, 100),
+            (self.lineEdit_13, 0, 1)
+        ]:
+            le.editingFinished.connect(lambda le=le, minv=minv, maxv=maxv: self.validate_range(le, minv, maxv))
 
     def on_run_clicked(self):
 
@@ -242,6 +284,8 @@ class MyApp(QWidget, Ui_Widget):
                 args.extend(["--miner_train_fraction", miner_train_fraction])
 
             subprocess.run(args)
+
+        self.pushButton.setText("Running Model...")
 
         QApplication.quit()
 
