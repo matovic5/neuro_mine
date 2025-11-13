@@ -5,6 +5,7 @@ from PySide6.QtCore import QProcess
 from PySide6.QtGui import QPalette, QColor
 from PySide6.QtWidgets import QApplication, QWidget, QFileDialog, QLineEdit, QCheckBox, QMessageBox
 from neuro_mine.ui.ui_form import Ui_Widget
+import numpy as np
 import os
 from process_csv import default_options
 import subprocess
@@ -49,7 +50,7 @@ class MyApp(QWidget, Ui_Widget):
             (self.lineEdit_6, 0, 1),
             (self.lineEdit_7, 0, 1),
             (self.lineEdit_8, 0, 1),
-            (self.lineEdit_9, 1.0, None),
+            (self.lineEdit_9, 1.0, np.inf),
             (self.lineEdit_12, 0, 100),
             (self.lineEdit_13, 0, 1)
         ]:
@@ -219,7 +220,7 @@ class MyApp(QWidget, Ui_Widget):
             (self.lineEdit_6, 0, 1),
             (self.lineEdit_7, 0, 1),
             (self.lineEdit_8, 0, 1),
-            (self.lineEdit_9, 1.0, None),
+            (self.lineEdit_9, 1.0, np.inf),
             (self.lineEdit_12, 0, 100),
             (self.lineEdit_13, 0, 1)
         ]:
