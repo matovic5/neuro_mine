@@ -46,7 +46,7 @@ conda activate mine
 pip install neuro_mine
 ```
 
-[4] Run program
+[4] Run program (may take a few minutes for UI to launch upon first run)
 
 ```bash
 Mine-gui
