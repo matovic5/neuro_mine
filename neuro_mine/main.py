@@ -16,3 +16,10 @@ def main():
             subprocess.run(["python", str(script_path)] + sys.argv[1:])
         else:
             subprocess.run(["python", str(script_path)])
+
+def predict():
+    with importlib.resources.path("neuro_mine.scripts", "response_prediction.py") as script_path:
+        if len(sys.argv) > 1:
+            subprocess.run(["python", str(script_path)] + sys.argv[1:])
+        else:
+            subprocess.run(["python", str(script_path)])
