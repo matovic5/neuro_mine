@@ -98,13 +98,14 @@ def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
     configuration["run"]["interpolation_time_delta"] = np.mean(np.diff(ip_time))
     configuration["run"]["is_spike_data"] = is_spike_data
     configuration["run"]["n_predictors"] = len(mine_pred)
-    with open(path.join(output_folder, f"MINE_{your_model}_run_config.json"), 'w') as config_file:
-        json.dump(configuration, config_file, indent=2)
 
     # compute our "frame rate", i.e. frames per time-unit on the interpolated scale
     ip_rate = 1 / np.mean(np.diff(ip_time))
     # based on the rate, compute the number of frames within the model history and taylor-look-ahead
     model_history = int(np.round(history_time * ip_rate, 0))
+    configuration["run"]["model_history_frames"] = model_history
+    with open(path.join(output_folder, f"MINE_{your_model}_run_config.json"), 'w') as config_file:
+        json.dump(configuration, config_file, indent=2)
     if model_history < 1:
         model_history = 1
     taylor_look_ahead = int(np.round(model_history * taylor_look_fraction, 0))
