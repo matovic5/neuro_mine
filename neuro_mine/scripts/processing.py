@@ -78,15 +78,22 @@ def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
     df_ip_pred_data.to_csv(path.join(output_folder, f"MINE_{your_model}_interpolated_predictors.csv"), index=False)
 
     # perform data-appropriate standardization of predictors and responses
+    # save standardizations for storage
     if time_as_pred == "Y":
-        mine_pred = [safe_standardize(ipd) for ipd in ip_pred_data.T]
+        standardized_predictors, m_pred, s_pred = safe_standardize(ip_pred_data, axis=0)
     else:
-        mine_pred = [safe_standardize(ipd) for ipd in ip_pred_data.T[1:]]
+        standardized_predictors, m_pred, s_pred = safe_standardize(ip_pred_data[:, 1:], axis=0)
+    mine_pred = [sipd for sipd in standardized_predictors.T]
     # In the following the first column is removed since it is time
     if not is_spike_data:
-        mine_resp = safe_standardize(ip_resp_data[:, 1:]).T
+        mine_resp, m_resp, s_resp = safe_standardize(ip_resp_data[:, 1:], axis=0)
+        mine_resp = mine_resp.T
     else:
         mine_resp = ip_resp_data[:, 1:].T
+        # Since this data is not standardized, we set the subtractive component to 0
+        # and the divisive component to 1
+        m_resp = np.zeros(mine_resp.shape[0])
+        s_resp = np.ones(mine_resp.shape[0])
 
     configuration["run"]["interpolation_time_delta"] = np.mean(np.diff(ip_time))
     configuration["run"]["is_spike_data"] = is_spike_data
@@ -139,6 +146,11 @@ def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
 
     full_ana_file_name = f"MINE_{your_model}_analysis.hdf5"
     with h5py.File(path.join(output_folder, full_ana_file_name), "w") as ana_file:
+        std_grp = ana_file.create_group("standardization")
+        std_grp.create_dataset("m_pred", data=m_pred)
+        std_grp.create_dataset("s_pred", data=s_pred)
+        std_grp.create_dataset("m_resp", data=m_resp)
+        std_grp.create_dataset("s_resp", data=s_resp)
         ana_grp = ana_file.create_group("analysis")
         mdata.save_to_hdf5(ana_grp)
         if mdata_shuff is not None:

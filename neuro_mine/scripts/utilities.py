@@ -7,7 +7,7 @@ from __future__ import annotations
 import numpy as np
 import tensorflow as tf
 import h5py
-from typing import Union, List, Any, Optional
+from typing import Union, List, Any, Optional, Tuple
 from numba import njit
 from warnings import warn
 
@@ -124,21 +124,27 @@ def bootstrap(data: np.ndarray, nboot: int, bootfun: callable) -> np.ndarray:
     return variates
 
 
-def safe_standardize(x: np.ndarray, axis: Optional[int] = None, epsilon=1e-9) -> np.ndarray:
+def safe_standardize(x: np.ndarray, axis: Optional[int] = None, epsilon=1e-9) -> Tuple[np.ndarray,
+                                                                                       np.ndarray,
+                                                                                       np.ndarray]:
     """
     Standardizes an array to 0 mean and unit standard deviation avoiding division by 0
     :param x: The array to standardize
-    :param axis: The axis along which standardization should be performmed
+    :param axis: The axis along which standardization should be performed
     :param epsilon: Small constant to add to standard deviation to avoid divide by 0 if sd(x)=0
     :return: The standardized array of same dimension as x
     """
     if x.ndim == 1 or axis is None:
-        y = x - np.mean(x)
-        y /= (np.std(y) + epsilon)
+        m = np.mean(x)
+        y = x - m
+        s = np.std(y) + epsilon
+        y /= s
     else:
-        y = x - np.mean(x, axis=axis, keepdims=True)
-        y /= (np.std(y, axis=axis, keepdims=True) + epsilon)
-    return y
+        m = np.mean(x, axis=axis, keepdims=True)
+        y = x - m
+        s = np.std(y, axis=axis, keepdims=True) + epsilon
+        y /= s
+    return y, m, s
 
 
 def barcode_cluster(x: np.ndarray, threshold: Union[float, np.ndarray]) -> np.ndarray:
