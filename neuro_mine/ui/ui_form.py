@@ -262,6 +262,26 @@ class Ui_Widget(object):
         self.label_29.setObjectName(u"label_29")
         self.label_29.setGeometry(QRect(580, 80, 16, 16))
         self.label_29.setPixmap(QPixmap(u":/question.png"))
+        self.pushButton.raise_()
+        self.pushButton_2.raise_()
+        self.pushButton_3.raise_()
+        self.pushButton_4.raise_()
+        self.widget.raise_()
+        self.pushButton_6.raise_()
+        self.layoutWidget.raise_()
+        self.label_19.raise_()
+        self.label_20.raise_()
+        self.label_21.raise_()
+        self.label_22.raise_()
+        self.label_23.raise_()
+        self.label_24.raise_()
+        self.label_25.raise_()
+        self.label_26.raise_()
+        self.label_27.raise_()
+        self.label.raise_()
+        self.label_28.raise_()
+        self.label_29.raise_()
+        self.pushButton_5.raise_()
 
         self.retranslateUi(Widget)
 
@@ -269,7 +289,7 @@ class Ui_Widget(object):
     # setupUi
 
     def retranslateUi(self, Widget):
-        Widget.setWindowTitle(QCoreApplication.translate("Widget", u"Neruo MINE", None))
+        Widget.setWindowTitle(QCoreApplication.translate("Widget", u"Neuro MINE", None))
         self.pushButton.setText(QCoreApplication.translate("Widget", u"Run Model", None))
         self.pushButton_2.setText(QCoreApplication.translate("Widget", u"Browse...", None))
         self.pushButton_3.setText(QCoreApplication.translate("Widget", u"Browse...", None))
