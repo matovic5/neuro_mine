@@ -203,7 +203,7 @@ def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
     # such that convolutions are restricted to the past (hence model_history)
     def time_from_index(ix: int) -> float:
         ix_corr = ix - model_history + 1  # at model history is timepoint 0
-        return ip_rate * ix_corr
+        return (1/ip_rate) * ix_corr
 
     if fit_jacobian and np.any(model_scores >= test_score_thresh):
         for i, pc in enumerate(predictor_columns):
