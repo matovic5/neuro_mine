@@ -82,6 +82,79 @@ class MineSpikingData(_BaseData):
         utilities.create_overwrite(file_object, "roc_auc_test", self.roc_auc_test, overwrite)
 
 
+class _Outputs:
+    """
+    Internal class for MINE outputs
+    """
+
+    def __init__(self, compute_taylor: bool, return_jacobians: bool, return_hessians: bool, n_responses: int,
+                 n_predictors: int, model_history: int):
+        """
+        Generate a new output collection
+        :param compute_taylor: Indicates if Taylor analysis will be performed
+        :param return_jacobians: Indicates if Jacobians should be stored
+        :param return_hessians: Indicates if hessians should be stored
+        :param n_responses: The total number of responses to fit
+        :param n_predictors: The total number of predictors to use
+        :param model_history: The model historyn length
+        """
+        # calculate number of taylor components
+        n_taylor = (n_predictors ** 2 - n_predictors) // 2 + n_predictors
+        self.scores_trained = np.full(n_responses, np.nan)
+        self.scores_test = self.scores_trained.copy()
+        if compute_taylor:
+            self.taylor_scores = np.full((n_responses, n_taylor, 2), np.nan)
+            self.taylor_true_change = []
+            self.taylor_full_prediction = []
+            self.taylor_by_pred = []
+            self.lin_approx_scores = self.scores_test.copy()
+            self.me_scores = self.scores_test.copy()
+        else:
+            self.taylor_scores = None
+            self.taylor_true_change = None
+            self.taylor_full_prediction = None
+            self.taylor_by_pred = None
+            self.lin_approx_scores = None
+            self.me_scores = None
+        if return_jacobians:
+            self.all_jacobians = np.full((n_responses, model_history * n_predictors), np.nan)
+        else:
+            self.all_jacobians = None
+        if return_hessians:
+            self.all_hessians = np.full((n_responses, model_history * n_predictors,
+                                         model_history * n_predictors), np.nan)
+        else:
+            self.all_hessians = None
+
+    def to_mine_data(self, spiking: bool) -> _BaseData:
+        if spiking:
+            return MineSpikingData(
+                roc_auc_test=self.scores_test,
+                roc_auc_trained=self.scores_trained,
+                taylor_scores=self.taylor_scores,
+                taylor_true_change=self.taylor_true_change,
+                taylor_full_prediction=self.taylor_full_prediction,
+                taylor_by_predictor=self.taylor_by_pred,
+                model_lin_approx_scores=self.lin_approx_scores,
+                model_2nd_approx_scores=self.me_scores,
+                jacobians=self.all_jacobians,
+                hessians=self.all_hessians
+            )
+        else:
+            return MineData(
+                correlations_test=self.scores_test,
+                correlations_trained=self.scores_trained,
+                taylor_scores=self.taylor_scores,
+                taylor_true_change=self.taylor_true_change,
+                taylor_full_prediction=self.taylor_full_prediction,
+                taylor_by_predictor=self.taylor_by_pred,
+                model_lin_approx_scores=self.lin_approx_scores,
+                model_2nd_approx_scores=self.me_scores,
+                jacobians=self.all_jacobians,
+                hessians=self.all_hessians
+            )
+
+
 class MineWarning(Warning):
     def __init__(self, message: str):
         super().__init__(message)
@@ -132,14 +205,12 @@ class Mine:
         self.verbose = True
         self.fit_spikes = fit_spikes
 
-    def analyze_data(self, pred_data: List[np.ndarray], response_data: np.ndarray) -> _BaseData:
+    def check_inputs(self, pred_data: List[np.ndarray], response_data: np.ndarray) -> None:
         """
-        Process given data with MINE
+         Check compatibility and standardization of predictor and response data
         :param pred_data: Predictor data as a list of n_timepoints long vectors. Predictors are shared among all
             responses
         :param response_data: n_responses x n_timepoints matrix of responses
-        :return:
-            MineData object with the requested data
         """
         # check for matching sizes
         res_len = response_data.shape[1]
@@ -154,7 +225,7 @@ class Mine:
                 warnings.warn("WARNING: Response data does not appear standardized to 0 mean and standard deviation 1",
                               MineWarning)
         else:
-            if not np.all(np.logical_or(response_data == 0 , response_data == 1)):
+            if not np.all(np.logical_or(response_data == 0, response_data == 1)):
                 warnings.warn("WARNING: Spike data analysis selected but at least part of the data is neither 1 nor 0",
                               MineWarning)
         # predictors should ideally always be standardized
@@ -162,6 +233,18 @@ class Mine:
             if not np.isclose(np.mean(pd), 0, atol=1e-2) or not np.isclose(np.std(pd), 1, atol=1e-2):
                 warnings.warn(f"WARNING: Predictor {i} does not appear standardized to 0 mean and standard deviation 1",
                               MineWarning)
+
+    def analyze_data(self, pred_data: List[np.ndarray], response_data: np.ndarray) -> _BaseData:
+        """
+        Process given data with MINE
+        :param pred_data: Predictor data as a list of n_timepoints long vectors. Predictors are shared among all
+            responses
+        :param response_data: n_responses x n_timepoints matrix of responses
+        :return:
+            MineData object with the requested data
+        """
+        self.check_inputs(pred_data, response_data)
+        res_len = response_data.shape[1]
         train_frames = int(self.train_fraction * res_len)
         n_predictors = len(pred_data)
 
@@ -172,32 +255,9 @@ class Mine:
         else:
             score_function = lambda predicted, real: np.corrcoef(predicted, real)[0, 1]
 
-        scores_trained = np.full(response_data.shape[0], np.nan)
-        scores_test = scores_trained.copy()
-        if self.compute_taylor:
-            n_taylor = (n_predictors ** 2 - n_predictors) // 2 + n_predictors
-            taylor_scores = np.full((response_data.shape[0], n_taylor, 2), np.nan)
-            taylor_true_change = []
-            taylor_full_prediction = []
-            taylor_by_pred = []
-            lin_approx_scores = scores_test.copy()
-            me_scores = scores_test.copy()
-        else:
-            taylor_scores = None
-            taylor_true_change = None
-            taylor_full_prediction = None
-            taylor_by_pred = None
-            lin_approx_scores = None
-            me_scores = None
-        if self.return_jacobians:
-            all_jacobians = np.full((response_data.shape[0], self.model_history * n_predictors), np.nan)
-        else:
-            all_jacobians = None
-        if self.return_hessians:
-            all_hessians = np.full((response_data.shape[0], self.model_history * n_predictors,
-                                    self.model_history * n_predictors), np.nan)
-        else:
-            all_hessians = None
+        # define our outputs
+        outs = _Outputs(self.compute_taylor, self.return_jacobians, self.return_hessians, response_data.shape[0],
+                        n_predictors, self.model_history)
 
         data_obj = utilities.Data(self.model_history, pred_data, response_data, train_frames)
         # create model once
@@ -221,16 +281,16 @@ class Mine:
             # evaluate
             p, r = data_obj.predict_response(cell_ix, m)
             c_tr = score_function(p[:train_frames], r[:train_frames])
-            scores_trained[cell_ix] = c_tr
+            outs.scores_trained[cell_ix] = c_tr
             c_ts = score_function(p[train_frames:], r[train_frames:])
-            scores_test[cell_ix] = c_ts
+            outs.scores_test[cell_ix] = c_ts
             # if the cell doesn't have a test score of at least score_cut we skip the rest
             # NOTE: This means that some return values will only have one entry for each unit
             # that made the cut - the user will have to handle those cases
             if c_ts < self.score_cut or not np.isfinite(c_ts):
                 if self.verbose:
                     print(f"        Unit {cell_ix+1} out of {response_data.shape[0]} fit. "
-                          f"Test score={scores_test[cell_ix]} which was below cut-off.")
+                          f"Test score={outs.scores_test[cell_ix]} which was below cut-off.")
                 continue
             # compute first and second order derivatives
             tset = data_obj.training_data(cell_ix, 256)
@@ -244,16 +304,16 @@ class Mine:
                 # compute taylor expansion
                 true_change, pc, by_pred = taylor_decompose(m, regressors, self.taylor_pred_every,
                                                             self.taylor_look_ahead)
-                taylor_true_change.append(true_change)
-                taylor_full_prediction.append(pc)
-                taylor_by_pred.append(by_pred)
+                outs.taylor_true_change.append(true_change)
+                outs.taylor_full_prediction.append(pc)
+                outs.taylor_by_pred.append(by_pred)
                 # compute first and 2nd order model predictions
                 # for spiking models these need to be computed in probability space not log-probability space
                 # since deviations at the extremes in log space do not carry the same wait as deviations close to 0
                 lin_score, o2_score = complexity_scores(m, x_bar, jacobian, hessian, regressors, self.taylor_pred_every,
                                                         self.fit_spikes)
-                lin_approx_scores[cell_ix] = lin_score
-                me_scores[cell_ix] = o2_score
+                outs.lin_approx_scores[cell_ix] = lin_score
+                outs.me_scores[cell_ix] = o2_score
                 # compute our by-predictor taylor importance as the fractional loss of r2 when excluding the component
                 # for spiking models these need to be computed in probability space not log-probability space
                 # since deviations at the extremes in log space do not carry the same wait as deviations close to 0
@@ -268,14 +328,14 @@ class Mine:
                             remainder = pc - by_pred[:, row, column]
                             # Store in the first n_diag indices of taylor_by_pred (i.e. simply at row as indexer)
                             bsample = utilities.bootstrap_fractional_r2loss(true_change, pc, remainder, 1000)
-                            taylor_scores[cell_ix, row, 0] = np.mean(bsample)
-                            taylor_scores[cell_ix, row, 1] = np.std(bsample)
+                            outs.taylor_scores[cell_ix, row, 0] = np.mean(bsample)
+                            outs.taylor_scores[cell_ix, row, 1] = np.std(bsample)
                         elif row < column:
                             remainder = pc - by_pred[:, row, column] - by_pred[:, column, row]
                             # Store in row-major order in taylor_by_pred after the first n_diag indices
                             bsample = utilities.bootstrap_fractional_r2loss(true_change, pc, remainder, 1000)
-                            taylor_scores[cell_ix, n_predictors + off_diag_index, 0] = np.mean(bsample)
-                            taylor_scores[cell_ix, n_predictors + off_diag_index, 1] = np.std(bsample)
+                            outs.taylor_scores[cell_ix, n_predictors + off_diag_index, 0] = np.mean(bsample)
+                            outs.taylor_scores[cell_ix, n_predictors + off_diag_index, 1] = np.std(bsample)
                             off_diag_index += 1
             if self.return_jacobians or self.return_hessians:
                 # compute average predictor
@@ -283,55 +343,29 @@ class Mine:
                     jacobian = jacobian.numpy().ravel()
                     # reorder jacobian by n_predictor long chunks of hist_steps timeslices
                     jacobian = np.reshape(jacobian, (self.model_history, n_predictors)).T.ravel()
-                    all_jacobians[cell_ix, :] = jacobian
+                    outs.all_jacobians[cell_ix, :] = jacobian
                 if self.return_hessians:
                     hessian = np.reshape(hessian.numpy(), (x_bar.shape[2] * self.model_history,
                                                            x_bar.shape[2] * self.model_history))
                     hessian = utilities.rearrange_hessian(hessian, n_predictors, self.model_history)
-                    all_hessians[cell_ix, :, :] = hessian
+                    outs.all_hessians[cell_ix, :, :] = hessian
             if self.verbose:
                 print(f"        Unit {cell_ix+1} out of {response_data.shape[0]} completed. "
-                      f"Test score={scores_test[cell_ix]}")
+                      f"Test score={outs.scores_test[cell_ix]}")
         if self.compute_taylor:
             # turn the taylor predictions into ndarrays unless no unit passed threshold
-            if len(taylor_true_change) > 0:
+            if len(outs.taylor_true_change) > 0:
                 if data_obj.ca_responses.shape[0] > 1:
-                    taylor_true_change = np.vstack(taylor_true_change)
-                    taylor_full_prediction = np.vstack(taylor_full_prediction)
-                    taylor_by_pred = np.vstack([pbp[None, :] for pbp in taylor_by_pred])
+                    outs.taylor_true_change = np.vstack(outs.taylor_true_change)
+                    outs.taylor_full_prediction = np.vstack(outs.taylor_full_prediction)
+                    outs.taylor_by_pred = np.vstack([pbp[None, :] for pbp in outs.taylor_by_pred])
                 else:
                     # only one fit object, just expand dimension to keep things consistent
-                    taylor_true_change = taylor_true_change[0][None, :]
-                    taylor_full_prediction = taylor_full_prediction[0][None, :]
-                    taylor_by_pred = taylor_by_pred[0][None, :]
+                    outs.taylor_true_change = outs.taylor_true_change[0][None, :]
+                    outs.taylor_full_prediction = outs.taylor_full_prediction[0][None, :]
+                    outs.taylor_by_pred = outs.taylor_by_pred[0][None, :]
             else:
-                taylor_true_change = np.nan
-                taylor_full_prediction = np.nan
-                taylor_by_pred = np.nan
-        if self.fit_spikes:
-            return_data = MineSpikingData(
-                roc_auc_test=scores_test,
-                roc_auc_trained=scores_trained,
-                taylor_scores=taylor_scores,
-                taylor_true_change=taylor_true_change,
-                taylor_full_prediction=taylor_full_prediction,
-                taylor_by_predictor=taylor_by_pred,
-                model_lin_approx_scores=lin_approx_scores,
-                model_2nd_approx_scores=me_scores,
-                jacobians=all_jacobians,
-                hessians=all_hessians
-            )
-        else:
-            return_data = MineData(
-                correlations_test=scores_test,
-                correlations_trained=scores_trained,
-                taylor_scores=taylor_scores,
-                taylor_true_change=taylor_true_change,
-                taylor_full_prediction=taylor_full_prediction,
-                taylor_by_predictor=taylor_by_pred,
-                model_lin_approx_scores=lin_approx_scores,
-                model_2nd_approx_scores=me_scores,
-                jacobians=all_jacobians,
-                hessians=all_hessians
-            )
-        return return_data
+                outs.taylor_true_change = np.nan
+                outs.taylor_full_prediction = np.nan
+                outs.taylor_by_pred = np.nan
+        return outs.to_mine_data(self.fit_spikes)
