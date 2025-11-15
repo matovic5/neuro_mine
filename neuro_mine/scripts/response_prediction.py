@@ -130,6 +130,9 @@ if __name__ == '__main__':
                 m.set_weights(model_weights)
                 prediction = simulate_response(m, p_data)[:, None]
                 assert prediction.size == prediction_time.size
+                if is_spike_data:
+                    # Transform to probabilities
+                    prediction = 1 / (1 + np.exp(-prediction))
                 all_predictions.append(prediction)
             all_predictions = np.hstack(all_predictions)
             # undo standardization
