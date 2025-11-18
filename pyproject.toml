@@ -4,10 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "neuro_mine"
-version = "0.2.8"
-description = "Identifies the contribution of behavioural and stimulus parameters to nerual activity"
+version = "0.3.0"
+description = "Identifies the contribution of behavioural and stimulus parameters to neural activity"
 readme = "README.md"
-license = {file = "LICENSE"}
 authors = [
     {name = "Danica Matovic", email = "matovic.5@osu.edu"},
     {name = "Martin Haesemeyer", email = "haesemeyer.1@osu.edu"}
@@ -24,6 +23,9 @@ dependencies = [
     "upsetplot==0.9.*",
     "scikit-learn==1.6.*"
 ]
+
+[tool.setuptools]
+license-files = ["LICENSE"]
 
 [project.urls]
 Homepage = "https://github.com/matovic5/neuro_mine"
