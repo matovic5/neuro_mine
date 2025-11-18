@@ -2,7 +2,7 @@
 Script to convert Suite2p extracted activity into CSV format for MINE ingestion
 """
 
-from PyQt5.QtWidgets import QFileDialog, QApplication
+from PySide6.QtWidgets import QFileDialog, QApplication
 import numpy as np
 import pandas as pd
 import argparse
