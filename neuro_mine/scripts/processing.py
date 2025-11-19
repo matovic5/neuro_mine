@@ -10,6 +10,7 @@ from utilities import safe_standardize, interp_events
 from mine import Mine
 import upsetplot as ups
 import matplotlib.pyplot as pl
+from warnings import filterwarnings
 
 
 def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
@@ -263,6 +264,8 @@ def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
         fig.savefig(path.join(output_folder, f"MINE_{your_model}_LinearityMetrics.pdf"))
 
         # perform barcode clustering
+        # suppress warning about pandas 3.0 compatibility which is violated by upsetplot
+        filterwarnings("ignore", category=FutureWarning)
         interpret_df = interpret_df[interpret_df["Fit"] == "Y"]
         barcode_labels = [ph for ph in predictor_columns] + ["Nonlinear"]
         barcode = np.hstack([(np.array(interpret_df[ph])=="Y")[:, None] for ph in predictor_columns])
