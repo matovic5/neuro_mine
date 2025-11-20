@@ -13,6 +13,26 @@ import matplotlib.pyplot as pl
 from warnings import filterwarnings
 
 
+def ip_time_proposal(pred_times: np.ndarray, resp_times: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    For one set (e.g., episode) of predictor and response data, proposes interpolation times
+    :param pred_times:
+    :param resp_times:
+    :return:
+    """
+    # define interpolation time as the timespan covered in both datasets at the rate in the file with fewer timepoints
+    # within that timespan (i.e. we bin to the lower resolution instead of interpolating to the higher resolution)
+    max_allowed_time = min([pred_times.max(), resp_times.max()])
+    min_allowed_time = max([pred_times.min(), resp_times.min()])
+    valid_pred = np.logical_and(pred_times <= max_allowed_time, pred_times >= min_allowed_time)
+    valid_resp = np.logical_and(resp_times <= max_allowed_time, resp_times >= min_allowed_time)
+    # define interpolation time based on the less dense data ensuring equal timesteps
+    if np.sum(valid_pred) < np.sum(valid_resp):
+        ip_time = np.linspace(min_allowed_time, max_allowed_time, np.sum(valid_pred))
+    else:
+        ip_time = np.linspace(min_allowed_time, max_allowed_time, np.sum(valid_resp))
+    return ip_time, valid_pred, valid_resp
+
 def joint_interpolation(predictor_data: np.ndarray, response_data: np.ndarray, pred_times: np.ndarray,
                         resp_times: np.ndarray, is_spike_data: bool) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
@@ -29,17 +49,7 @@ def joint_interpolation(predictor_data: np.ndarray, response_data: np.ndarray, p
         [2]: n_interp_times vector of interpolation times as floats
     """
 
-    # define interpolation time as the timespan covered in both datasets at the rate in the file with fewer timepoints
-    # within that timespan (i.e. we bin to the lower resolution instead of interpolating to the higher resolution)
-    max_allowed_time = min([pred_times.max(), resp_times.max()])
-    min_allowed_time = max([pred_times.min(), resp_times.min()])
-    valid_pred = np.logical_and(pred_times <= max_allowed_time, pred_times >= min_allowed_time)
-    valid_resp = np.logical_and(resp_times <= max_allowed_time, resp_times >= min_allowed_time)
-    # define interpolation time based on the less dense data ensuring equal timesteps
-    if np.sum(valid_pred) < np.sum(valid_resp):
-        ip_time = np.linspace(min_allowed_time, max_allowed_time, np.sum(valid_pred))
-    else:
-        ip_time = np.linspace(min_allowed_time, max_allowed_time, np.sum(valid_resp))
+    ip_time, valid_pred, valid_resp = ip_time_proposal(pred_times, resp_times)
 
     # perform interpolation
     ip_pred_data = np.hstack(
