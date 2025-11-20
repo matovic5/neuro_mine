@@ -132,7 +132,10 @@ def safe_standardize(x: np.ndarray, axis: Optional[int] = None, epsilon=1e-9) ->
     :param x: The array to standardize
     :param axis: The axis along which standardization should be performed
     :param epsilon: Small constant to add to standard deviation to avoid divide by 0 if sd(x)=0
-    :return: The standardized array of same dimension as x
+    :return:
+        [0]: The standardized array of same dimension as x
+        [1]: The average used for subtraction
+        [2]: The standard deviation used for division
     """
     if x.ndim == 1 or axis is None:
         m = np.mean(x)
@@ -145,6 +148,29 @@ def safe_standardize(x: np.ndarray, axis: Optional[int] = None, epsilon=1e-9) ->
         s = np.std(y, axis=axis, keepdims=True) + epsilon
         y /= s
     return y, m, s
+
+
+def safe_standardize_episodic(xl: List[np.ndarray],
+                              axis: Optional[int] = None, epsilon=1e-9) -> Tuple[List[np.ndarray],np.ndarray,np.ndarray]:
+    """
+    Standardizes episodic data (list of arrays) to a common z-score across episodes
+    :param xl: List of data, all data objects must have the same shape except along axis
+    :param axis: The axis along which to standardize
+    :param epsilon: Small constant to add to standard deviation to avoid divide by 0 if sd(x)=0
+    :return:
+        [0]: List of arrays standardized to same values
+        [1]: The average used for subtraction
+        [2]: The standard deviation used for division
+    """
+    if axis is not None:
+        all_x = np.concatenate(xl, axis=axis)
+        m = np.mean(all_x, axis=axis, keepdims=True)
+        s = np.std(all_x, axis=axis, keepdims=True) + epsilon
+    else:
+        all_x = np.hstack([x.ravel() for x in xl])
+        m = np.mean(all_x)
+        s = np.std(all_x) + epsilon
+    return [(x-m)/s for x in xl], m, s
 
 
 def barcode_cluster(x: np.ndarray, threshold: Union[float, np.ndarray]) -> np.ndarray:
