@@ -33,6 +33,57 @@ def ip_time_proposal(pred_times: np.ndarray, resp_times: np.ndarray) -> Tuple[np
         ip_time = np.linspace(min_allowed_time, max_allowed_time, np.sum(valid_resp))
     return ip_time, valid_pred, valid_resp
 
+
+def episodic_interpolation(predictor_data: List[np.ndarray], response_data: List[np.ndarray], pred_times: List[np.ndarray],
+                        resp_times: List[np.ndarray], is_spike_data: bool) -> Tuple[List[np.ndarray], List[np.ndarray], List[np.ndarray]]:
+    """
+    Interpolates episodic data to a shared time delta
+    :param predictor_data: List of predictor data in each episode
+    :param response_data: List of response data in each episode
+    :param pred_times: List of predictor times in each episode
+    :param resp_times: List of response times in each episode
+    :param is_spike_data: Indicates whether responses are continuous (False) or 0/1 events (True)
+    :return:
+        [0]: List of n_interp_times x n_predictors matrix of interpolated predictors
+        [1]: List of n_interp_times x n_responses matrix of interpolated responses
+        [2]: List of n_interp_times vector of interpolation times as floats
+    """
+    if len(predictor_data) != len(response_data) or len(predictor_data) != len(pred_times) or len(predictor_data) != len(resp_times):
+        raise ValueError("All input lists must have the same number of elements = episodes")
+    n_episodes = len(predictor_data)
+    # for each episode build interpolation times with the same time-delta which we set to the minimal
+    # time delta proposed across episodes
+    min_delta = np.inf  # the chosen delta
+    min_times, max_times = [], []  # for each episode the minimum and maximum valid times
+    valid_pred, valid_resp = [], []  # for each episode the valid input elements
+    for p_times, r_times in zip(pred_times, resp_times):
+        tp, vp, vr = ip_time_proposal(p_times, r_times)
+        if np.min(np.diff(p_times)) < min_delta:
+            min_delta = np.min(np.diff(p_times))
+            assert min_delta > 0
+        min_times.append(np.min(tp))
+        max_times.append(np.max(tp))
+        valid_pred.append(vp)
+        valid_resp.append(vr)
+    # perform interpolation
+    ip_preds, ip_resps, ip_times = [], [], []
+    for i in range(n_episodes):
+        n_frames = int((max_times[i] - min_times[i]) / min_delta)
+        ip_time = min_times[i] + np.arange(n_frames) * min_delta
+        ip_pred_data = np.hstack(
+            [np.interp(ip_time, pred_times[i][valid_pred[i]], pd[valid_pred[i]])[:, None] for pd in predictor_data[i].T])
+        if not is_spike_data:
+            ip_resp_data = np.hstack(
+                [np.interp(ip_time, resp_times[i][valid_resp[i]], rd[valid_resp[i]])[:, None] for rd in response_data[i].T])
+        else:
+            ip_resp_data = np.hstack(
+                [interp_events(ip_time, resp_times[i][valid_resp[i]], rd[valid_resp[i]])[:, None] for rd in response_data[i].T])
+        ip_preds.append(ip_pred_data)
+        ip_resps.append(ip_resp_data)
+        ip_times.append(ip_time)
+    return ip_preds, ip_resps, ip_times
+
+
 def joint_interpolation(predictor_data: np.ndarray, response_data: np.ndarray, pred_times: np.ndarray,
                         resp_times: np.ndarray, is_spike_data: bool) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
