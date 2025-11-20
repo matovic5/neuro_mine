@@ -6,7 +6,7 @@ import os
 import h5py
 import file_handling as fh
 import json
-from utilities import safe_standardize, interp_events
+from utilities import safe_standardize, interp_events, safe_standardize_episodic
 from mine import Mine, MineData, MineSpikingData
 import upsetplot as ups
 import matplotlib.pyplot as pl
@@ -71,7 +71,7 @@ def episodic_interpolation(predictor_data: List[np.ndarray], response_data: List
         n_frames = int((max_times[i] - min_times[i]) / min_delta)
         ip_time = min_times[i] + np.arange(n_frames) * min_delta
         ip_pred_data = np.hstack(
-            [np.interp(ip_time, pred_times[i][valid_pred[i]], pd[valid_pred[i]])[:, None] for pd in predictor_data[i].T])
+            [np.interp(ip_time, pred_times[i][valid_pred[i]], pda[valid_pred[i]])[:, None] for pda in predictor_data[i].T])
         if not is_spike_data:
             ip_resp_data = np.hstack(
                 [np.interp(ip_time, resp_times[i][valid_resp[i]], rd[valid_resp[i]])[:, None] for rd in response_data[i].T])
@@ -104,7 +104,7 @@ def joint_interpolation(predictor_data: np.ndarray, response_data: np.ndarray, p
 
     # perform interpolation
     ip_pred_data = np.hstack(
-        [np.interp(ip_time, pred_times[valid_pred], pd[valid_pred])[:, None] for pd in predictor_data.T])
+        [np.interp(ip_time, pred_times[valid_pred], pda[valid_pred])[:, None] for pda in predictor_data.T])
     if not is_spike_data:
         ip_resp_data = np.hstack(
             [np.interp(ip_time, resp_times[valid_resp], rd[valid_resp])[:, None] for rd in response_data.T])
@@ -197,7 +197,7 @@ def barcode_cluster_plot(insight_df: pd.DataFrame, predictor_names: List[str]) -
     return fig, df_barcode
 
 
-def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
+def process_paired_files(resp_path: List[str], pred_path: List[str], configuration: Dict):
     your_model = configuration["run"]["model_name"]
     run_shuffle = configuration["config"]["run_shuffle"]
     time_as_pred = configuration["config"]["use_time"]
@@ -213,29 +213,68 @@ def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
     sqr_thresh = configuration["config"]["th_sqr"]
     taylor_cutoff = configuration["config"]["taylor_cut"]
 
-    resp_data, resp_has_header, resp_header = fh.CSVParser(resp_path, "R").load_data()
-    pred_data, pred_has_header, pred_header = fh.CSVParser(pred_path, "P").load_data()
+    if len(resp_path) != len(pred_path):
+        raise ValueError("Episodic data needs to have the same number of predictor and response files")
 
-    # store all output file in a sub-folder of the response file folder
-    output_folder = path.join(path.split(resp_path)[0], "output")
+    is_episodic = len(resp_path) > 1
+
+    resp_data = None
+    pred_data = None
+    resp_data_list = None
+    pred_data_list = None
+    if is_episodic:
+        resp_data_list = []
+        pred_data_list = []
+        resp_header, pred_header = None, None
+        for rp, pp in zip(resp_path, pred_path):
+            rda, rhh, rh = fh.CSVParser(rp, "R").load_data()
+            if resp_header is None:
+                resp_header = rh
+            resp_data_list.append(rda)
+            pda, phh, ph = fh.CSVParser(pp, "P").load_data()
+            if pred_header is None:
+                pred_header = ph
+            pred_data_list.append(pda)
+    else:
+        resp_data, resp_has_header, resp_header = fh.CSVParser(resp_path[0], "R").load_data()
+        pred_data, pred_has_header, pred_header = fh.CSVParser(pred_path[0], "P").load_data()
+
+    # store all output file in a sub-folder of the response file folder - for episodic data we use the first response
+    # file to indicate the storage location, same as for non-episodic data
+    output_folder = path.join(path.split(resp_path[0])[0], "output")
     if not path.exists(output_folder):
         os.makedirs(output_folder)
 
     # We use a very simple heuristic to detect spiking data and we will not allow for mixed data. In other words
     # a response file either contains all continuous data or all spiking data. When in doubt, we will treat as
-    # continuous
-    if np.all(np.logical_or(resp_data==0, resp_data==1)):
-        is_spike_data = True
-        print("Responses are assumed to contain spikes")
+    # continuous - the same is true for determination across episodes
+    if not is_episodic:
+        if np.all(np.logical_or(resp_data==0, resp_data==1)):
+            is_spike_data = True
+            print("Responses are assumed to contain spikes")
+        else:
+            is_spike_data = False
+            print("Responses are assumed to be continuous values not spikes")
     else:
-        is_spike_data = False
-        print("Responses are assumed to be continuous values not spikes")
+        is_spike_data = True
+        for rda in resp_data_list:
+            if not np.all(np.logical_or(rda==0, rda==1)):
+                is_spike_data = False
+        if is_spike_data:
+            print("Responses are assumed to contain spikes")
+        else:
+            print("Responses are assumed to be continuous values not spikes")
 
-    ip_pred_data, ip_resp_data, ip_time = joint_interpolation(pred_data, resp_data, pred_data[:, 0],
-                                                              resp_data[:, 0], is_spike_data)
+    if not is_episodic:
+        ip_pred_data, ip_resp_data, ip_time = joint_interpolation(pred_data, resp_data, pred_data[:, 0],
+                                                                  resp_data[:, 0], is_spike_data)
+    else:
+        ip_pred_data, ip_resp_data, ip_time = episodic_interpolation(pred_data_list, resp_data_list,
+                                                                     [pda[:, 0] for pda in pred_data_list],
+                                                                     [rda[:, 0] for rda in resp_data_list], is_spike_data)
 
-    # Save interpolated data with chosen column names if verbose flag is set
-    if miner_verbose:
+    # Save interpolated data with chosen column names if verbose flag is set - currently not for episodic data
+    if miner_verbose and not is_episodic:
         df_ip_resp_data = pd.DataFrame(ip_resp_data, columns=resp_header)
         df_ip_resp_data.to_csv(path.join(output_folder, f"MINE_{your_model}_interpolated_responses.csv"), index=False)
         df_ip_pred_data = pd.DataFrame(ip_pred_data, columns=pred_header)
@@ -243,29 +282,48 @@ def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
 
     # perform data-appropriate standardization of predictors and responses
     # save standardizations for storage
-    standardized_predictors, m_pred, s_pred = safe_standardize(ip_pred_data, axis=0)
-    if not time_as_pred:
-        standardized_predictors = standardized_predictors[:, 1:]
-        m_pred = m_pred[1:]
-        s_pred = s_pred[1:]
-    mine_pred = [sipd for sipd in standardized_predictors.T]
-    # In the following the first column is removed since it is time
-    if not is_spike_data:
-        mine_resp, m_resp, s_resp = safe_standardize(ip_resp_data[:, 1:], axis=0)
-        mine_resp = mine_resp.T
-    else:
-        mine_resp = ip_resp_data[:, 1:].T
-        # Since this data is not standardized, we set the subtractive component to 0
-        # and the divisive component to 1
-        m_resp = np.zeros(mine_resp.shape[0])
-        s_resp = np.ones(mine_resp.shape[0])
+    if not is_episodic:
+        standardized_predictors, m_pred, s_pred = safe_standardize(ip_pred_data, axis=0)
+        if not time_as_pred:
+            standardized_predictors = standardized_predictors[:, 1:]
+            m_pred = m_pred[1:]
+            s_pred = s_pred[1:]
+        mine_pred = [sipd for sipd in standardized_predictors.T]
+        # In the following the first column is removed since it is time
+        if not is_spike_data:
+            mine_resp, m_resp, s_resp = safe_standardize(ip_resp_data[:, 1:], axis=0)
+            mine_resp = mine_resp.T
+        else:
+            mine_resp = ip_resp_data[:, 1:].T
+            # Since this data is not standardized, we set the subtractive component to 0
+            # and the divisive component to 1
+            m_resp = np.zeros(mine_resp.shape[0])
+            s_resp = np.ones(mine_resp.shape[0])
+    else:  # episodic data
+        standardized_predictors, m_pred, s_pred = safe_standardize_episodic(ip_pred_data, axis=0)
+        if not time_as_pred:
+            standardized_predictors = [sp[:, 1:] for sp in standardized_predictors]
+            m_pred = m_pred[1:]
+            s_pred = s_pred[1:]
+        mine_pred = [[sipd for sipd in standardized_predictors[i].T] for i in range(len(standardized_predictors))]
+        if not is_spike_data:
+            mine_resp, m_resp, s_resp = safe_standardize_episodic([ipr[:, 1:] for ipr in ip_resp_data], axis=0)
+            mine_resp = [mr.T for mr in mine_resp]
+        else:
+            mine_resp = [ipr[:, 1:].T for ipr in ip_resp_data]
+            m_resp = np.zeros(mine_resp[0].shape[0])
+            s_resp = np.ones(mine_resp[0].shape[0])
 
     configuration["run"]["interpolation_time_delta"] = np.mean(np.diff(ip_time))
     configuration["run"]["is_spike_data"] = is_spike_data
     configuration["run"]["n_predictors"] = len(mine_pred)
+    configuration["run"]["is_episodic"] = is_episodic
 
     # compute our "frame rate", i.e. frames per time-unit on the interpolated scale
-    ip_rate = 1 / np.mean(np.diff(ip_time))
+    if not is_episodic:
+        ip_rate = 1 / np.mean(np.diff(ip_time))
+    else:
+        ip_rate = 1 / np.mean(np.diff(ip_time[0]))
     # based on the rate, compute the number of frames within the model history and taylor-look-ahead
     model_history = int(np.round(history_time * ip_rate, 0))
     if model_history < 1:
@@ -295,7 +353,10 @@ def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
         miner.n_epochs = fit_epochs
         miner.verbose = miner_verbose
         miner.model_weight_store = w_grp
-        mdata = miner.analyze_data(mine_pred, mine_resp)
+        if not is_episodic:
+            mdata = miner.analyze_data(mine_pred, mine_resp)
+        else:
+            mdata = miner.analyze_episodic(mine_pred, mine_resp)
         # save neuron names
         name_grp = weight_file.create_group("response_names")
         for i, r in enumerate(resp_header[1:]):  # first entry is "Time"
@@ -303,7 +364,10 @@ def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
 
     # rotate mine_resp on user request and re-fit without computing any Taylor just to get test correlations
     if run_shuffle:
-        mine_resp_shuff = np.roll(mine_resp, mine_resp.shape[1] // 2, axis=1)
+        if not is_episodic:
+            mine_resp_shuff = np.roll(mine_resp, mine_resp.shape[1] // 2, axis=1)
+        else:
+            mine_resp_shuff = [np.roll(mr, mr.shape[1] // 2, axis=1) for mr in mine_resp]
         with h5py.File(path.join(output_folder, weight_file_name), "a") as weight_file:
             w_grp = weight_file.create_group("fit_shuffled")
             miner = Mine(miner_train_fraction, model_history, test_score_thresh, False, False,
@@ -311,7 +375,10 @@ def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
             miner.n_epochs = fit_epochs
             miner.verbose = miner_verbose
             miner.model_weight_store = w_grp
-            mdata_shuff = miner.analyze_data(mine_pred, mine_resp_shuff)
+            if not is_episodic:
+                mdata_shuff = miner.analyze_data(mine_pred, mine_resp_shuff)
+            else:
+                mdata_shuff = miner.analyze_episodic(mine_pred, mine_resp_shuff)
 
     full_ana_file_name = f"MINE_{your_model}_analysis.hdf5"
     with h5py.File(path.join(output_folder, full_ana_file_name), "w") as ana_file:
