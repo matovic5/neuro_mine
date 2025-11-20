@@ -273,7 +273,7 @@ class Mine:
             score_function = lambda predicted, real: np.corrcoef(predicted, real)[0, 1]
 
         # define our outputs
-        outs = _Outputs(self.compute_taylor, self.return_jacobians, self.return_hessians, response_data.shape[0],
+        outs = _Outputs(self.compute_taylor, self.return_jacobians, self.return_hessians, n_responses,
                         n_predictors, self.model_history)
 
         ep_data = utilities.EpisodicData(self.model_history, pred_data, response_data, train_ep)
@@ -389,7 +389,7 @@ class Mine:
                     hessian = utilities.rearrange_hessian(hessian, n_predictors, self.model_history)
                     outs.all_hessians[cell_ix, :, :] = hessian
             if self.verbose:
-                print(f"        Unit {cell_ix + 1} out of {response_data.shape[0]} completed. "
+                print(f"        Unit {cell_ix + 1} out of {n_responses} completed. "
                       f"Test score={outs.scores_test[cell_ix]}")
         if self.compute_taylor:
             # turn the taylor predictions into ndarrays unless no unit passed threshold
