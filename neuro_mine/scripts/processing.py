@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Tuple, List, Union
 import numpy as np
 import pandas as pd
 from os import path
@@ -7,10 +7,108 @@ import h5py
 import file_handling as fh
 import json
 from utilities import safe_standardize, interp_events
-from mine import Mine
+from mine import Mine, MineData, MineSpikingData
 import upsetplot as ups
 import matplotlib.pyplot as pl
 from warnings import filterwarnings
+
+
+def joint_interpolation(predictor_data: np.ndarray, response_data: np.ndarray, pred_times: np.ndarray,
+                        resp_times: np.ndarray, is_spike_data: bool) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Interpolates predictor and response data such that only overlapping times will be considered and interpolation
+    occurs to the lower resolution between predictor and response times.
+    :param predictor_data: n_timepoints x n_predictors - can include time column
+    :param response_data: n_timepoints x n_responses - can include time column
+    :param pred_times: n_timepoints vector of predictor times as floats
+    :param resp_times: n_timepoints vector of response times as floats
+    :param is_spike_data: Indicates whether responses are continuous (False) or 0/1 events (True)
+    :return:
+        [0]: n_interp_times x n_predictors matrix of interpolated predictors
+        [1]: n_interp_times x n_responses matrix of interpolated responses
+        [2]: n_interp_times vector of interpolation times as floats
+    """
+
+    # define interpolation time as the timespan covered in both datasets at the rate in the file with fewer timepoints
+    # within that timespan (i.e. we bin to the lower resolution instead of interpolating to the higher resolution)
+    max_allowed_time = min([pred_times.max(), resp_times.max()])
+    min_allowed_time = max([pred_times.min(), resp_times.min()])
+    valid_pred = np.logical_and(pred_times <= max_allowed_time, pred_times >= min_allowed_time)
+    valid_resp = np.logical_and(resp_times <= max_allowed_time, resp_times >= min_allowed_time)
+    # define interpolation time based on the less dense data ensuring equal timesteps
+    if np.sum(valid_pred) < np.sum(valid_resp):
+        ip_time = np.linspace(min_allowed_time, max_allowed_time, np.sum(valid_pred))
+    else:
+        ip_time = np.linspace(min_allowed_time, max_allowed_time, np.sum(valid_resp))
+
+    # perform interpolation
+    ip_pred_data = np.hstack(
+        [np.interp(ip_time, pred_times[valid_pred], pd[valid_pred])[:, None] for pd in predictor_data.T])
+    if not is_spike_data:
+        ip_resp_data = np.hstack(
+            [np.interp(ip_time, resp_times[valid_resp], rd[valid_resp])[:, None] for rd in response_data.T])
+    else:
+        ip_resp_data = np.hstack(
+            [interp_events(ip_time, resp_times[valid_resp], rd[valid_resp])[:, None] for rd in response_data.T])
+    return ip_pred_data, ip_resp_data, ip_time
+
+
+def generate_insights(mdata: Union[MineData, MineSpikingData], is_spike_data: bool, predictor_names: List[str],
+                      response_names: List[str], **kwargs) -> pd.DataFrame:
+    if "test_score_thresh" in kwargs:
+        test_score_thresh = kwargs["test_score_thresh"]
+    else:
+        test_score_thresh = np.sqrt(0.5)
+    if "taylor_sig" in kwargs:
+        taylor_sig = kwargs["taylor_sig"]
+    else:
+        taylor_sig = 0.05
+    if "taylor_cutoff" in kwargs:
+        taylor_cutoff = kwargs["taylor_cutoff"]
+    else:
+        taylor_cutoff = 0.1
+    if "lax_thresh" in kwargs:
+        lax_thresh = kwargs["lax_thresh"]
+    else:
+        lax_thresh = 0.8
+    if "sqr_thresh" in kwargs:
+        sqr_thresh = kwargs["sqr_thresh"]
+    else:
+        sqr_thresh = 0.5
+
+    model_scores = mdata.roc_auc_test if is_spike_data else mdata.correlations_test
+    interpret_dict = {"Response": [], "Fit": []} | {ph: [] for ph in predictor_names} | {"Linearity": []}
+    n_objects = model_scores.size
+    # for taylor analysis (which predictors are important) compute our significance levels based on a) user input
+    # and b) the number of responses above threshold which gives the multiple-comparison correction - bonferroni
+    min_significance = 1 - taylor_sig / np.sum(model_scores >= test_score_thresh)
+    normal_quantiles_by_sigma = np.array([0.682689492137, 0.954499736104, 0.997300203937, 0.999936657516,
+                                          0.999999426697, 0.999999998027])
+    n_sigma = np.where((min_significance - normal_quantiles_by_sigma) < 0)[0][0] + 1
+
+    for j in range(n_objects):
+        response = response_names[j]
+        interpret_dict["Response"].append(response)
+        fit = model_scores[j] > test_score_thresh
+        interpret_dict["Fit"].append("Y" if fit else "N")
+        if not fit:
+            for pc in predictor_names:
+                interpret_dict[pc].append("-")
+            interpret_dict["Linearity"].append("-")
+        else:
+            if mdata.model_lin_approx_scores[j] >= lax_thresh:
+                interpret_dict["Linearity"].append("linear")
+            else:
+                if mdata.model_2nd_approx_scores[j] >= sqr_thresh:
+                    interpret_dict["Linearity"].append("quadratic")
+                else:
+                    interpret_dict["Linearity"].append("cubic+")
+            for k, pc in enumerate(predictor_names):
+                taylor_mean = mdata.taylor_scores[j][k][0]
+                taylor_std = mdata.taylor_scores[j][k][1]
+                taylor_is_sig = taylor_mean - n_sigma * taylor_std - taylor_cutoff
+                interpret_dict[pc].append("Y" if taylor_is_sig > 0 else "N")
+    return pd.DataFrame(interpret_dict)
 
 
 def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
@@ -47,43 +145,23 @@ def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
         is_spike_data = False
         print("Responses are assumed to be continuous values not spikes")
 
-    pred_times = pred_data[:, 0]
-    resp_times = resp_data[:, 0]
+    ip_pred_data, ip_resp_data, ip_time = joint_interpolation(pred_data, resp_data, pred_data[:, 0],
+                                                              resp_data[:, 0], is_spike_data)
 
-    # define interpolation time as the timespan covered in both files at the rate in the file with fewer timepoints
-    # within that timespan (i.e. we bin to the lower resolution instead of interpolating to the higher resolution)
-    max_allowed_time = min([pred_times.max(), resp_times.max()])
-    min_allowed_time = max([pred_times.min(), resp_times.min()])
-    valid_pred = np.logical_and(pred_times <= max_allowed_time, pred_times >= min_allowed_time)
-    valid_resp = np.logical_and(resp_times <= max_allowed_time, resp_times >= min_allowed_time)
-    # define interpolation time based on the less dense data ensuring equal timesteps
-    if np.sum(valid_pred) < np.sum(valid_resp):
-        ip_time = np.linspace(min_allowed_time, max_allowed_time, np.sum(valid_pred))
-    else:
-        ip_time = np.linspace(min_allowed_time, max_allowed_time, np.sum(valid_resp))
-
-    # perform interpolation
-    ip_pred_data = np.hstack(
-        [np.interp(ip_time, pred_times[valid_pred], pd[valid_pred])[:, None] for pd in pred_data.T])
-    if not is_spike_data:
-        ip_resp_data = np.hstack(
-            [np.interp(ip_time, resp_times[valid_resp], rd[valid_resp])[:, None] for rd in resp_data.T])
-    else:
-        ip_resp_data = np.hstack(
-            [interp_events(ip_time, resp_times[valid_resp], rd[valid_resp])[:, None] for rd in resp_data.T])
-
-    # Save interpolated data with chosen column names
-    df_ip_resp_data = pd.DataFrame(ip_resp_data, columns=resp_header)
-    df_ip_resp_data.to_csv(path.join(output_folder, f"MINE_{your_model}_interpolated_responses.csv"), index=False)
-    df_ip_pred_data = pd.DataFrame(ip_pred_data, columns=pred_header)
-    df_ip_pred_data.to_csv(path.join(output_folder, f"MINE_{your_model}_interpolated_predictors.csv"), index=False)
+    # Save interpolated data with chosen column names if verbose flag is set
+    if miner_verbose:
+        df_ip_resp_data = pd.DataFrame(ip_resp_data, columns=resp_header)
+        df_ip_resp_data.to_csv(path.join(output_folder, f"MINE_{your_model}_interpolated_responses.csv"), index=False)
+        df_ip_pred_data = pd.DataFrame(ip_pred_data, columns=pred_header)
+        df_ip_pred_data.to_csv(path.join(output_folder, f"MINE_{your_model}_interpolated_predictors.csv"), index=False)
 
     # perform data-appropriate standardization of predictors and responses
     # save standardizations for storage
-    if time_as_pred == "Y":
-        standardized_predictors, m_pred, s_pred = safe_standardize(ip_pred_data, axis=0)
-    else:
-        standardized_predictors, m_pred, s_pred = safe_standardize(ip_pred_data[:, 1:], axis=0)
+    standardized_predictors, m_pred, s_pred = safe_standardize(ip_pred_data, axis=0)
+    if not time_as_pred:
+        standardized_predictors = standardized_predictors[:, 1:]
+        m_pred = m_pred[1:]
+        s_pred = s_pred[1:]
     mine_pred = [sipd for sipd in standardized_predictors.T]
     # In the following the first column is removed since it is time
     if not is_spike_data:
@@ -104,11 +182,14 @@ def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
     ip_rate = 1 / np.mean(np.diff(ip_time))
     # based on the rate, compute the number of frames within the model history and taylor-look-ahead
     model_history = int(np.round(history_time * ip_rate, 0))
-    configuration["run"]["model_history_frames"] = model_history
-    with open(path.join(output_folder, f"MINE_{your_model}_run_config.json"), 'w') as config_file:
-        json.dump(configuration, config_file, indent=2)
     if model_history < 1:
         model_history = 1
+
+    configuration["run"]["model_history_frames"] = model_history
+    # Save configuration to file
+    with open(path.join(output_folder, f"MINE_{your_model}_run_config.json"), 'w') as config_file:
+        json.dump(configuration, config_file, indent=2)
+
     taylor_look_ahead = int(np.round(model_history * taylor_look_fraction, 0))
     if taylor_look_ahead < 1:
         taylor_look_ahead = 1
@@ -162,41 +243,15 @@ def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
     ###
     # Output model insights as csv
     ###
-    model_scores = mdata.roc_auc_test if is_spike_data else mdata.correlations_test
-    predictor_columns = pred_header if time_as_pred == 'Y' else pred_header[1:]
-    interpret_dict = {"Response": [], "Fit": []} | {ph: [] for ph in predictor_columns} | {"Linearity": []}
+    predictor_columns = pred_header if time_as_pred else pred_header[1:]
+    response_names = resp_header[1:]
     interpret_name = f"MINE_{your_model}_Insights.csv"
-    n_objects = model_scores.size
-    # for taylor analysis (which predictors are important) compute our significance levels based on a) user input
-    # and b) the number of responses above threshold which gives the multiple-comparison correction - bonferroni
-    min_significance = 1 - taylor_sig / np.sum(model_scores >= test_score_thresh)
-    normal_quantiles_by_sigma = np.array([0.682689492137, 0.954499736104, 0.997300203937, 0.999936657516,
-                                          0.999999426697, 0.999999998027])
-    n_sigma = np.where((min_significance - normal_quantiles_by_sigma) < 0)[0][0] + 1
-
-    for j in range(n_objects):
-        response = resp_header[j + 1]  # because resp_header still contains the first "time" column
-        interpret_dict["Response"].append(response)
-        fit = model_scores[j] > test_score_thresh
-        interpret_dict["Fit"].append("Y" if fit else "N")
-        if not fit:
-            for pc in predictor_columns:
-                interpret_dict[pc].append("-")
-            interpret_dict["Linearity"].append("-")
-        else:
-            if mdata.model_lin_approx_scores[j] >= lax_thresh:
-                interpret_dict["Linearity"].append("linear")
-            else:
-                if mdata.model_2nd_approx_scores[j] >= sqr_thresh:
-                    interpret_dict["Linearity"].append("quadratic")
-                else:
-                    interpret_dict["Linearity"].append("cubic+")
-            for k, pc in enumerate(predictor_columns):
-                taylor_mean = mdata.taylor_scores[j][k][0]
-                taylor_std = mdata.taylor_scores[j][k][1]
-                taylor_is_sig = taylor_mean - n_sigma * taylor_std - taylor_cutoff
-                interpret_dict[pc].append("Y" if taylor_is_sig > 0 else "N")
-    interpret_df = pd.DataFrame(interpret_dict)
+    interpret_df = generate_insights(mdata, is_spike_data, predictor_columns, response_names,
+                                     test_score_thresh=test_score_thresh,
+                                     taylor_sig=taylor_sig,
+                                     taylor_cutoff=taylor_cutoff,
+                                     lax_thresh=lax_thresh,
+                                     sqr_thresh=sqr_thresh)
     interpret_df.to_csv(path.join(output_folder, interpret_name), index=False)
 
     # save Jacobians: One CSV file for each predictor, containing the Jacobians for each response
@@ -206,6 +261,8 @@ def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
         ix_corr = ix - model_history + 1  # at model history is timepoint 0
         return (1/ip_rate) * ix_corr
 
+    model_scores = mdata.roc_auc_test if is_spike_data else mdata.correlations_test
+    n_objects = model_scores.size
     if fit_jacobian and np.any(model_scores >= test_score_thresh):
         for i, pc in enumerate(predictor_columns):
             jac_dict = {"Response": []} | {f"{time_from_index(t)}": [] for t in range(model_history)}
