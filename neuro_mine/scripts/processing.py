@@ -55,6 +55,15 @@ def joint_interpolation(predictor_data: np.ndarray, response_data: np.ndarray, p
 
 def generate_insights(mdata: Union[MineData, MineSpikingData], is_spike_data: bool, predictor_names: List[str],
                       response_names: List[str], **kwargs) -> pd.DataFrame:
+    """
+    Based on mine analysis data produces a dataframe with information about each response
+    :param mdata: MINE output data
+    :param is_spike_data: If true, responses are assumed to have been spikes
+    :param predictor_names: The names of the predictors used
+    :param response_names: The names of the responses that were used in fitting
+    :param kwargs: Further arguments about thresholds (test_score_thresh, taylor_sig, taylor_cutoff, lax_thresh, sqr_thresh_
+    :return: Dataframe with insights about model fits
+    """
     if "test_score_thresh" in kwargs:
         test_score_thresh = kwargs["test_score_thresh"]
     else:
