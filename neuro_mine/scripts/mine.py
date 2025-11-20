@@ -12,7 +12,7 @@ import warnings
 from sklearn.metrics import roc_auc_score
 
 @dataclass(frozen=True)
-class _BaseData:
+class BaseData:
     """
     Class for shared MINE return values
     """
@@ -49,7 +49,7 @@ class _BaseData:
             utilities.create_overwrite(file_object, "hessians", self.hessians, overwrite)
 
 @dataclass(frozen=True)
-class MineData(_BaseData):
+class MineData(BaseData):
     """Class for the return values of MINE"""
     correlations_trained: np.ndarray
     correlations_test: np.ndarray
@@ -66,7 +66,7 @@ class MineData(_BaseData):
 
 
 @dataclass(frozen=True)
-class MineSpikingData(_BaseData):
+class MineSpikingData(BaseData):
     """Class for the return values of MINE after spiking analysis"""
     roc_auc_trained: np.ndarray
     roc_auc_test: np.ndarray
@@ -126,7 +126,7 @@ class _Outputs:
         else:
             self.all_hessians = None
 
-    def to_mine_data(self, spiking: bool) -> _BaseData:
+    def to_mine_data(self, spiking: bool) -> Union[MineSpikingData, MineData]:
         if spiking:
             return MineSpikingData(
                 roc_auc_test=self.scores_test,
@@ -245,7 +245,8 @@ class Mine:
         init_weights = m.get_weights()
         return m, init_weights
 
-    def analyze_episodic(self, pred_data: List[List[np.ndarray]], response_data: List[np.ndarray]) -> _BaseData:
+    def analyze_episodic(self, pred_data: List[List[np.ndarray]],
+                         response_data: List[np.ndarray]) -> Union[MineSpikingData, MineData]:
         if len(pred_data) != len(response_data):
             raise ValueError(f"Episode count in prediction data {len(pred_data)} does not match response data {len(response_data)}")
         n_predictors = None
@@ -408,7 +409,7 @@ class Mine:
                 outs.taylor_by_pred = np.nan
         return outs.to_mine_data(self.fit_spikes)
 
-    def analyze_data(self, pred_data: List[np.ndarray], response_data: np.ndarray) -> _BaseData:
+    def analyze_data(self, pred_data: List[np.ndarray], response_data: np.ndarray) -> Union[MineSpikingData, MineData]:
         """
         Process given data with MINE
         :param pred_data: Predictor data as a list of n_timepoints long vectors. Predictors are shared among all
