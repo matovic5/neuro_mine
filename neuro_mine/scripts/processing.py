@@ -181,6 +181,22 @@ def generate_insights(mdata: Union[MineData, MineSpikingData], is_spike_data: bo
     return pd.DataFrame(interpret_dict)
 
 
+def barcode_cluster_plot(insight_df: pd.DataFrame, predictor_names: List[str]) -> Tuple[pl.Figure, pd.DataFrame]:
+    # suppress warning about pandas 3.0 compatibility which is violated by upsetplot
+    filterwarnings("ignore", category=FutureWarning)
+    barcode_labels = [ph for ph in predictor_names] + ["Nonlinear"]
+    barcode = np.hstack([(np.array(insight_df[ph]) == "Y")[:, None] for ph in predictor_names])
+    barcode = np.c_[barcode, (np.array(insight_df["Linearity"]) != "linear")[:, None]]
+    df_barcode = pd.DataFrame(barcode, columns=barcode_labels)
+    aggregate = ups.from_indicators(df_barcode)
+    fig = pl.figure()
+    up_set = ups.UpSet(aggregate, subset_size='count', min_subset_size=1, facecolor="C1", sort_by='cardinality',
+                       sort_categories_by=None)
+    axes_dict = up_set.plot(fig)
+    axes_dict['intersections'].set_yscale('log')
+    return fig, df_barcode
+
+
 def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
     your_model = configuration["run"]["model_name"]
     run_shuffle = configuration["config"]["run_shuffle"]
@@ -391,19 +407,7 @@ def process_file_pair(resp_path: str, pred_path: str, configuration: Dict):
         fig.savefig(path.join(output_folder, f"MINE_{your_model}_LinearityMetrics.pdf"))
 
         # perform barcode clustering
-        # suppress warning about pandas 3.0 compatibility which is violated by upsetplot
-        filterwarnings("ignore", category=FutureWarning)
-        interpret_df = interpret_df[interpret_df["Fit"] == "Y"]
-        barcode_labels = [ph for ph in predictor_columns] + ["Nonlinear"]
-        barcode = np.hstack([(np.array(interpret_df[ph])=="Y")[:, None] for ph in predictor_columns])
-        barcode = np.c_[barcode, (np.array(interpret_df["Linearity"])!="linear")[:, None]]
-        df_barcode = pd.DataFrame(barcode, columns=barcode_labels)
-        aggregate = ups.from_indicators(df_barcode)
-        fig = pl.figure()
-        up_set = ups.UpSet(aggregate, subset_size='count', min_subset_size=1, facecolor="C1", sort_by='cardinality',
-                           sort_categories_by=None)
-        axes_dict = up_set.plot(fig)
-        axes_dict['intersections'].set_yscale('log')
+        fig = barcode_cluster_plot(interpret_df[interpret_df["Fit"] == "Y"], predictor_columns)[0]
         fig.savefig(path.join(output_folder, f"MINE_{your_model}_BarcodeUpsetPlot.pdf"))
 
 
