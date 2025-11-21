@@ -167,8 +167,8 @@ if __name__ == '__main__':
             ###
             process_paired_files([pair[0]], [pair[1]], configuration)
     else:
-        p_files = [pair[0] for pair in file_pairs]
-        r_files = [pair[1] for pair in file_pairs]
+        r_files = [pair[0] for pair in file_pairs]
+        p_files = [pair[1] for pair in file_pairs]
         configuration = {
             "config":
                 {
@@ -194,4 +194,4 @@ if __name__ == '__main__':
                     "timestamp": datetime.now().now().isoformat(),
                 }
         }
-        process_paired_files(p_files, r_files, configuration)
+        process_paired_files(r_files, p_files, configuration)
