@@ -304,6 +304,8 @@ class Mine:
             for epp in ep_predictions[train_ep:]:
                 p_test.append(epp[0])
                 r_test.append(epp[1])
+            p_test = np.hstack(p_test)
+            r_test = np.hstack(r_test)
             c_ts = score_function(p_test, r_test)
             outs.scores_test[cell_ix] = c_ts
             # if the cell doesn't have a test score of at least score_cut we skip the rest

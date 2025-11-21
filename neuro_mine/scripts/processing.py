@@ -314,7 +314,10 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
             m_resp = np.zeros(mine_resp[0].shape[0])
             s_resp = np.ones(mine_resp[0].shape[0])
 
-    configuration["run"]["interpolation_time_delta"] = np.mean(np.diff(ip_time))
+    if not is_episodic:
+        configuration["run"]["interpolation_time_delta"] = np.mean(np.diff(ip_time))
+    else:
+        configuration["run"]["interpolation_time_delta"] = np.mean(np.diff(ip_time[0]))
     configuration["run"]["is_spike_data"] = is_spike_data
     configuration["run"]["n_predictors"] = len(mine_pred)
     configuration["run"]["is_episodic"] = is_episodic
