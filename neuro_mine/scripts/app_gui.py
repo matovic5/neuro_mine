@@ -1,29 +1,29 @@
 import datetime
 import importlib.resources
 import json
-from PySide6.QtCore import QProcess
 from PySide6.QtGui import QPalette, QColor
 from PySide6.QtWidgets import QApplication, QWidget, QFileDialog, QLineEdit, QCheckBox, QMessageBox
-from neuro_mine.ui.ui_form import Ui_Widget
+from neuro_mine.ui.mine_form import Ui_Widget
+import neuro_mine.ui.ui_utilities as uu
 import numpy as np
 import os
 from process_csv import default_options
 import subprocess
 import sys
 
-class MyApp(QWidget, Ui_Widget):
+class Mine_App(QWidget, Ui_Widget):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
         self.default_options = default_options
 
-        now = datetime.datetime.now().strftime("%B_%d_%Y_%I_%M%p")
+        now = datetime.datetime.now().strftime("%b%d%Y_%I%M%p")
         self.lineEdit.setText(now) # Model Name
         self.checkBox.setChecked(default_options["use_time"]) # Use Time as Predictor
         self.checkBox_2.setChecked(default_options["run_shuffle"]) # Shuffle Data
         self.lineEdit_3.setText(str(default_options["th_test"])) # Test Score Threshold
         self.lineEdit_5.setText(str(default_options["taylor_sig"])) # Taylor Expansion Significance Threshold
-        self.lineEdit_11.setText(str(default_options["taylor_look"]))  # Taylor Cutoff
+        self.lineEdit_11.setText(str(default_options["taylor_look"]))  # Taylor Look Ahead
         self.lineEdit_6.setText(str(default_options["taylor_cut"])) # Taylor Cutoff
         self.lineEdit_7.setText(str(default_options["th_lax"]))  # Linear Fit Variance explained cutoff
         self.lineEdit_8.setText(str(default_options["th_sqr"])) # Square Fit Variance explained cutoff
@@ -35,8 +35,8 @@ class MyApp(QWidget, Ui_Widget):
 
         # connect signals
         self.pushButton.clicked.connect(self.on_run_clicked)
-        self.pushButton_2.clicked.connect(lambda: self.browse_file(self.lineEdit_4, "Predictor", "*.csv"))
-        self.pushButton_3.clicked.connect(lambda: self.browse_file(self.lineEdit_2, "Response", "*.csv"))
+        self.pushButton_2.clicked.connect(lambda: uu.browse_file(self, self.lineEdit_4, "Predictor File", "*.csv", self.last_dir))
+        self.pushButton_3.clicked.connect(lambda: uu.browse_file(self, self.lineEdit_2, "Response File", "*.csv", self.last_dir))
         self.pushButton_4.clicked.connect(lambda: self.handle_json_browse(self.lineEdit_10))
         self.pushButton_5.clicked.connect(self.restore_defaults)
         self.pushButton_6.clicked.connect(self.save_to_json)
@@ -54,7 +54,10 @@ class MyApp(QWidget, Ui_Widget):
             (self.lineEdit_12, 0, 100),
             (self.lineEdit_13, 0, 1)
         ]:
-            le.editingFinished.connect(lambda le=le, minv=minv, maxv=maxv: self.validate_range(le, minv, maxv))
+            le.editingFinished.connect(
+                lambda le=le, minv=minv, maxv=maxv:
+                uu.validate_range(le, minv, maxv, self.valid_fields, self)
+            )
 
         self.last_dir = ""
 
@@ -62,17 +65,6 @@ class MyApp(QWidget, Ui_Widget):
         self.lineEdit_2.textChanged.connect(self.update_button_states)
 
         self.update_button_states()
-
-    def browse_file(self, target_lineedit, file_type, file_filter):
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            f"Select {file_type}",
-            self.last_dir or "",
-            file_filter,
-            options=QFileDialog.DontUseNativeDialog
-        )
-        if file_path:
-            target_lineedit.setText(file_path)
 
     def populate_presets(self):
         for attr, value in default_options["line_edits"].items():
@@ -154,27 +146,6 @@ class MyApp(QWidget, Ui_Widget):
         self.checkBox_3.setChecked(data.get("miner_verbose", default_options["miner_verbose"]))
         self.lineEdit_13.setText(str(data.get("miner_train_fraction", default_options["miner_train_fraction"])))
 
-    def validate_range(self, line_edit, min_val, max_val):
-        text = line_edit.text().strip()
-
-        try:
-            value = float(text)
-            if min_val <= value <= max_val:
-                line_edit.setPalette(self.style().standardPalette())
-                self.valid_fields[line_edit.objectName()] = True
-            else:
-                palette = line_edit.palette()
-                palette.setColor(QPalette.Base, QColor("crimson"))
-                line_edit.setPalette(palette)
-                self.valid_fields[line_edit.objectName()] = False
-        except ValueError:
-            palette = line_edit.palette()
-            palette.setColor(QPalette.Base, QColor("crimson"))
-            line_edit.setPalette(palette)
-            self.valid_fields[line_edit.objectName()] = False
-
-        self.update_button_states()
-
     def update_button_states(self):
         all_valid = all(self.valid_fields.values())
 
@@ -224,7 +195,7 @@ class MyApp(QWidget, Ui_Widget):
             (self.lineEdit_12, 0, 100),
             (self.lineEdit_13, 0, 1)
         ]:
-            le.editingFinished.connect(lambda le=le, minv=minv, maxv=maxv: self.validate_range(le, minv, maxv))
+            le.editingFinished.connect(lambda le=le, minv=minv, maxv=maxv: uu.validate_range(le, minv, maxv))
 
     def on_run_clicked(self):
 
@@ -286,13 +257,11 @@ class MyApp(QWidget, Ui_Widget):
 
             subprocess.run(args)
 
-        self.pushButton.setText("Running Model...")
-
         QApplication.quit()
 
 def run_ui():
     app = QApplication(sys.argv)
-    window = MyApp()
+    window = Mine_App()
     window.show()
     app.exec()
 

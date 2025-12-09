@@ -136,8 +136,15 @@ if __name__ == '__main__':
                 all_predictions.append(prediction)
             all_predictions = np.hstack(all_predictions)
             # undo standardization
-            all_predictions *= s_resp
-            all_predictions += m_resp
+            if above_threshold is not None:
+                all_predictions *= s_resp[:, above_threshold]
+                all_predictions += m_resp[:, above_threshold]
+            else:
+                all_predictions *= s_resp
+                all_predictions += m_resp
             all_predictions = np.c_[prediction_time[:, None], all_predictions]
-            df_predictions = pd.DataFrame(all_predictions, columns=["Time"]+response_names)
+            if above_threshold is None:
+                df_predictions = pd.DataFrame(all_predictions, columns=["Time"]+response_names)
+            else:
+                df_predictions = pd.DataFrame(all_predictions, columns=["Time"]+[r for i, r in enumerate(response_names) if above_threshold[i]])
             df_predictions.to_csv(out_file_path, index=False)
