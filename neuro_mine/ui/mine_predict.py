@@ -17,7 +17,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QDialog, QGridLayout, QLabel,
     QLineEdit, QPushButton, QSizePolicy, QWidget)
-import resources_rc
+import neuro_mine.ui.resources_rc
 
 class Ui_Widget(object):
     def setupUi(self, Widget):
