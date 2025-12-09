@@ -131,7 +131,10 @@ def safe_standardize(x: np.ndarray, axis: Optional[int] = None, epsilon=1e-9) ->
     :param x: The array to standardize
     :param axis: The axis along which standardization should be performed
     :param epsilon: Small constant to add to standard deviation to avoid divide by 0 if sd(x)=0
-    :return: The standardized array of same dimension as x
+    :return:
+        [0]: The standardized array of same dimension as x
+        [1]: The average used for subtraction
+        [2]: The standard deviation used for division
     """
     if x.ndim == 1 or axis is None:
         m = np.mean(x)
@@ -144,6 +147,29 @@ def safe_standardize(x: np.ndarray, axis: Optional[int] = None, epsilon=1e-9) ->
         s = np.std(y, axis=axis, keepdims=True) + epsilon
         y /= s
     return y, m, s
+
+
+def safe_standardize_episodic(xl: List[np.ndarray],
+                              axis: Optional[int] = None, epsilon=1e-9) -> Tuple[List[np.ndarray],np.ndarray,np.ndarray]:
+    """
+    Standardizes episodic data (list of arrays) to a common z-score across episodes
+    :param xl: List of data, all data objects must have the same shape except along axis
+    :param axis: The axis along which to standardize
+    :param epsilon: Small constant to add to standard deviation to avoid divide by 0 if sd(x)=0
+    :return:
+        [0]: List of arrays standardized to same values
+        [1]: The average used for subtraction
+        [2]: The standard deviation used for division
+    """
+    if axis is not None:
+        all_x = np.concatenate(xl, axis=axis)
+        m = np.mean(all_x, axis=axis, keepdims=True)
+        s = np.std(all_x, axis=axis, keepdims=True) + epsilon
+    else:
+        all_x = np.hstack([x.ravel() for x in xl])
+        m = np.mean(all_x)
+        s = np.std(all_x) + epsilon
+    return [(x-m)/s for x in xl], m, s
 
 
 def barcode_cluster(x: np.ndarray, threshold: Union[float, np.ndarray]) -> np.ndarray:
@@ -306,6 +332,91 @@ def interp_events(x: np.ndarray, xp: np.ndarray, fp: np.ndarray) -> np.ndarray:
               f" more than one spike")
     f[f > 1] = 1
     return f
+
+
+class EpisodicData:
+    def __init__(self, input_steps, regressors: List[List], ca_responses: List[np.ndarray], n_ep_for_train=-1):
+        """
+        Creates a new EpisodicData instance which is a container of Data objects for individual episodes and which
+        manages retrieval of training and test data objects that are joint across episodes
+        :param input_steps: The number of regressor timesteps into the past to use to model the response
+        :param regressors: List of regressor lists for each episode
+        :param ca_responses: List of ca_responses for each episode
+        :param n_ep_for_train: The number of episodes to use for training. All will be used if negative
+        """
+        if len(regressors) != len(ca_responses):
+            raise ValueError("Each episode must have a regressor and ca_response element")
+        self.n_episodes = len(regressors)
+        for r, car in zip(regressors, ca_responses):
+            if r[0].size != car.shape[1]:
+                raise ValueError("Number of timesteps between regressors and ca_responses must match for each episode")
+        self.data_objects = [Data(input_steps, r, car, -1) for r, car in zip(regressors, ca_responses)]
+        if n_ep_for_train > 0:
+            self.n_train_ep = n_ep_for_train
+        else:
+            self.n_train_ep = self.n_episodes
+        self.input_steps = input_steps
+
+    def training_data(self, sample_ix: int, batch_size=32):
+        """
+        Creates training data for the indicated calcium response sample (cell)
+        :param sample_ix: The index of the cell
+        :param batch_size: The training batch size to use
+        :return: Tensorflow dataset that can be used for training with randomization
+        """
+        dset = None
+        for data in self.data_objects[:self.n_train_ep]:
+            if dset is None:
+                dset = data.training_data(sample_ix, batch_size)
+            else:
+                dset = dset.concatenate(data.training_data(sample_ix, batch_size))
+        dset.shuffle(dset.cardinality(), reshuffle_each_iteration=True).batch(batch_size, drop_remainder=True)
+        return dset.prefetch(tf.data.AUTOTUNE)
+
+    def test_data(self, sample_ix: int, batch_size=32):
+        """
+        Creates test data for the indicated calcium response sample (cell)
+        :param sample_ix: The index of the cell
+        :param batch_size: The training batch size to use
+        :return: Tensorflow dataset that can be used for testing
+        """
+        if self.n_train_ep == self.n_episodes:
+            raise ValueError("All data is training data")
+        # Note: Since we split train/test by episode, all datasets are generated with train-fraction = 1. In the
+        # following we therefore extract the test episodes but get their data by calling the training_data method
+        dset = None
+        for data in self.data_objects[self.n_train_ep:]:
+            if dset is None:
+                dset = data.training_data(sample_ix, batch_size)
+            else:
+                dset = dset.concatenate(data.training_data(sample_ix, batch_size))
+        dset.shuffle(dset.cardinality(), reshuffle_each_iteration=True).batch(batch_size, drop_remainder=True)
+        return dset.prefetch(tf.data.AUTOTUNE)
+
+    def regressor_matrices(self, sample_ix: int) -> List[np.ndarray]:
+        """
+        For a given sample returns the regressor matrices of reach episode
+        :param sample_ix: The index of the cell
+        :return: n_timesteps x m_regressors matrix of regressors for the given cell
+        """
+        # NOTE: We do not concatenate in the following, since time is not continuous across episodes. Therefore, a
+        # concatenated matrix is not useful
+        return [d.regressor_matrix(sample_ix) for d in self.data_objects]
+
+    def predict_response(self, sample_ix: int, act_predictor):
+        """
+        Obtains the predicted response for a given cell
+        :param sample_ix: The index of the cell
+        :param act_predictor: The model to perform the prediction
+        :return:
+            [0]: n_timesteps-input_steps+1 sized vector of response prediction
+            [1]: Corresponding timesteps in the original calcium response
+        """
+        if act_predictor.input_length != self.input_steps:
+            raise ValueError("Input length of activity prediction model and data class mismatch")
+        # NOTE: We need to make sure that we do not predict across gaps but instead predict piecewise
+        # depending on use, the caller can subsequently concatenate
+        return [d.predict_response(sample_ix, act_predictor) for d in self.data_objects]
 
 
 class Data:

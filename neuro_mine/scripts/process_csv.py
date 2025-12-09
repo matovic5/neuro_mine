@@ -1,6 +1,6 @@
 import argparse
 from datetime import datetime
-from processing import process_file_pair
+from processing import process_paired_files
 import json
 import numpy as np
 import os
@@ -82,8 +82,13 @@ if __name__ == '__main__':
                           action='store_true')
     a_parser.add_argument("-mtf", "--miner_train_fraction", help="The fraction of data to use for training",
                           type=float, default=default_options['miner_train_fraction'])
+    a_parser.add_argument("-eps", "--episodic", help="If set data is assumed to be episodic with one "
+                                                     "predictor and one response file per episode.",
+                          action="store_true")
 
     args = a_parser.parse_args()
+
+    is_episodic = args.episodic
 
     r_paths = fh.process_file_args(args.responses)
     p_paths = fh.process_file_args(args.predictors)
@@ -127,8 +132,43 @@ if __name__ == '__main__':
     else:
         your_model = args.model_name
 
-    for i, pair in enumerate(file_pairs):
-        # save run information and configuration used as json file which we set up here
+    if not is_episodic:
+        for i, pair in enumerate(file_pairs):
+            # save run information and configuration used as json file which we set up here
+            configuration = {
+                "config":
+                    {
+                        "use_time": time_as_pred,
+                        "run_shuffle": run_shuffle,
+                        "th_test": test_score_thresh,
+                        "taylor_sig": taylor_sig,
+                        "taylor_cut": taylor_cutoff,
+                        "th_lax": lax_thresh,
+                        "th_sqr": sqr_thresh,
+                        "history": history_time,
+                        "taylor_look": taylor_look_fraction,
+                        "jacobian": fit_jacobian,
+                        "n_epochs": fit_epochs,
+                        "miner_verbose": miner_verbose,
+                        "miner_train_fraction": miner_train_fraction
+                    },
+                "run":
+                    {
+                        "model_name": your_model if len(file_pairs)==1 else f"{your_model}_{i}",
+                        "predictor_file": pair[1],
+                        "response_file": pair[0],
+                        "timestamp": datetime.now().now().isoformat(),
+                    }
+            }
+
+
+            ###
+            # Load and process data
+            ###
+            process_paired_files([pair[0]], [pair[1]], configuration)
+    else:
+        r_files = [pair[0] for pair in file_pairs]
+        p_files = [pair[1] for pair in file_pairs]
         configuration = {
             "config":
                 {
@@ -148,15 +188,10 @@ if __name__ == '__main__':
                 },
             "run":
                 {
-                    "model_name": your_model if len(file_pairs)==1 else f"{your_model}_{i}",
-                    "predictor_file": pair[1],
-                    "response_file": pair[0],
+                    "model_name": your_model,
+                    "predictor_files": p_files,
+                    "response_files": r_files,
                     "timestamp": datetime.now().now().isoformat(),
                 }
         }
-
-
-        ###
-        # Load and process data
-        ###
-        process_file_pair(pair[0], pair[1], configuration)
+        process_paired_files(r_files, p_files, configuration)
