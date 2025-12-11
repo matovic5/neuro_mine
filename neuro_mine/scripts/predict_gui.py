@@ -31,8 +31,19 @@ class Predict_App(QWidget, Ui_Widget):
 
         self.last_dir = ""
 
+        self.lineEdit.textChanged.connect(self.update_button_states)
+        self.lineEdit_2.textChanged.connect(self.update_button_states)
+        self.lineEdit_3.textChanged.connect(self.update_button_states)
+        self.lineEdit_4.textChanged.connect(self.update_button_states)
+        self.lineEdit_5.textChanged.connect(self.update_button_states)
+        self.lineEdit_6.textChanged.connect(self.update_button_states)
+
+        self.update_button_states()
+
     def handle_json_browse(self, target_lineedit):
-        file_path, _ = QFileDialog.getOpenFileName(self, "Select JSON File", "", "JSON Files (*.json)")
+        file_path, _ = QFileDialog.getOpenFileName(self, "Select JSON File", "", "JSON Files (*.json)",
+        options = QFileDialog.DontUseNativeDialog
+        )
         if file_path:
             target_lineedit.setText(file_path)
             self.load_json_and_populate(file_path)
@@ -53,17 +64,16 @@ class Predict_App(QWidget, Ui_Widget):
     def update_button_states(self):
         all_valid = all(self.valid_fields.values())
 
-        line_filled = bool(self.lineEdit.text().strip())
-        line2_filled = bool(self.lineEdit_2.text().strip())
-        line3_filled = bool(self.lineEdit_3.text().strip())
-        line4_filled = bool(self.lineEdit_4.text().strip())
-        line5_filled = bool(self.lineEdit_5.text().strip())
-        line6_filled = bool(self.lineEdit_6.text().strip())
-        required_fields_filled = line_filles and line2_filled and line3_filled and line4_filled and line5_filled and line6_filled
+        required_fields_filled = all(bool(le.text().strip()) for le in [
+            self.lineEdit,
+            self.lineEdit_2,
+            self.lineEdit_3,
+            self.lineEdit_4,
+            self.lineEdit_5,
+            self.lineEdit_6
+        ])
 
-        self.pushButton.setEnabled(all_valid and required_fields_filled)
-
-        self.pushButton_5.setEnabled(all_valid)
+        self.pushButton_5.setEnabled(all_valid and required_fields_filled)
 
     def on_run_clicked(self):
 

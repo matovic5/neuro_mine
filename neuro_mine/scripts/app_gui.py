@@ -3,7 +3,7 @@ import importlib.resources
 import json
 from PySide6.QtGui import QPalette, QColor
 from PySide6.QtWidgets import QApplication, QWidget, QFileDialog, QLineEdit, QCheckBox, QMessageBox
-from neuro_mine.ui.mine_form import Ui_Widget
+from neuro_mine.ui.mine_form import Ui_Form
 import neuro_mine.ui.ui_utilities as uu
 import numpy as np
 import os
@@ -11,7 +11,7 @@ from process_csv import default_options
 import subprocess
 import sys
 
-class Mine_App(QWidget, Ui_Widget):
+class Mine_App(QWidget, Ui_Form):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
@@ -19,40 +19,40 @@ class Mine_App(QWidget, Ui_Widget):
 
         now = datetime.datetime.now().strftime("%b%d%Y_%I%M%p")
         self.lineEdit.setText(now) # Model Name
-        self.checkBox.setChecked(default_options["use_time"]) # Use Time as Predictor
-        self.checkBox_2.setChecked(default_options["run_shuffle"]) # Shuffle Data
-        self.lineEdit_3.setText(str(default_options["th_test"])) # Test Score Threshold
-        self.lineEdit_5.setText(str(default_options["taylor_sig"])) # Taylor Expansion Significance Threshold
-        self.lineEdit_11.setText(str(default_options["taylor_look"]))  # Taylor Look Ahead
-        self.lineEdit_6.setText(str(default_options["taylor_cut"])) # Taylor Cutoff
-        self.lineEdit_7.setText(str(default_options["th_lax"]))  # Linear Fit Variance explained cutoff
-        self.lineEdit_8.setText(str(default_options["th_sqr"])) # Square Fit Variance explained cutoff
-        self.checkBox_4.setChecked(default_options["jacobian"]) # Store Linear Receptive Fields (Jacobians)
-        self.lineEdit_9.setText(str(default_options["history"])) # Model History [s]
-        self.lineEdit_12.setText(str(default_options["n_epochs"])) # Number of Epochs
-        self.lineEdit_13.setText(str(default_options["miner_train_fraction"])) # Fraction of Data to use to Train
-        self.checkBox_3.setChecked(True) # Verbose Fitting Updates
+        self.checkBox_2.setChecked(default_options["use_time"]) # Use Time as Predictor
+        self.checkBox_5.setChecked(default_options["run_shuffle"]) # Shuffle Data
+        self.lineEdit_2.setText(str(default_options["th_test"])) # Test Score Threshold
+        self.lineEdit_3.setText(str(default_options["taylor_sig"])) # Taylor Expansion Significance Threshold
+        self.lineEdit_4.setText(str(default_options["taylor_look"]))  # Taylor Look Ahead
+        self.lineEdit_5.setText(str(default_options["taylor_cut"])) # Taylor Cutoff
+        self.lineEdit_6.setText(str(default_options["th_lax"]))  # Linear Fit Variance explained cutoff
+        self.lineEdit_7.setText(str(default_options["th_sqr"])) # Square Fit Variance explained cutoff
+        self.checkBox_3.setChecked(default_options["jacobian"]) # Store Linear Receptive Fields (Jacobians)
+        self.lineEdit_8.setText(str(default_options["history"])) # Model History [s]
+        self.lineEdit_9.setText(str(default_options["n_epochs"])) # Number of Epochs
+        self.lineEdit_10.setText(str(default_options["miner_train_fraction"])) # Fraction of Data to use to Train
+        self.checkBox_4.setChecked(True) # Verbose Fitting Updates
 
         # connect signals
         self.pushButton.clicked.connect(self.on_run_clicked)
-        self.pushButton_2.clicked.connect(lambda: uu.browse_file(self, self.lineEdit_4, "Predictor File", "*.csv", self.last_dir))
-        self.pushButton_3.clicked.connect(lambda: uu.browse_file(self, self.lineEdit_2, "Response File", "*.csv", self.last_dir))
-        self.pushButton_4.clicked.connect(lambda: self.handle_json_browse(self.lineEdit_10))
+        self.pushButton_2.clicked.connect(lambda: uu.browse_multiple_files(self, self.textEdit, "Predictor File(s)", "*.csv", self.last_dir))
+        self.pushButton_3.clicked.connect(lambda: uu.browse_multiple_files(self, self.textEdit_2, "Response File(s)", "*.csv", self.last_dir))
+        self.pushButton_4.clicked.connect(lambda: self.handle_json_browse(self.lineEdit_11))
         self.pushButton_5.clicked.connect(self.restore_defaults)
         self.pushButton_6.clicked.connect(self.save_to_json)
 
         # connect field validation
         self.valid_fields = {}
         for le, minv, maxv in [
+            (self.lineEdit_2, 0, 1),
             (self.lineEdit_3, 0, 1),
+            (self.lineEdit_4, 0.00000001, 3.999999999),
             (self.lineEdit_5, 0, 1),
-            (self.lineEdit_11, 0.00000001, 3.999999999),
             (self.lineEdit_6, 0, 1),
             (self.lineEdit_7, 0, 1),
-            (self.lineEdit_8, 0, 1),
-            (self.lineEdit_9, 1.0, np.inf),
-            (self.lineEdit_12, 0, 100),
-            (self.lineEdit_13, 0, 1)
+            (self.lineEdit_8, 1.0, np.inf),
+            (self.lineEdit_9, 0, 100),
+            (self.lineEdit_10, 0, 1)
         ]:
             le.editingFinished.connect(
                 lambda le=le, minv=minv, maxv=maxv:
@@ -61,8 +61,8 @@ class Mine_App(QWidget, Ui_Widget):
 
         self.last_dir = ""
 
-        self.lineEdit_4.textChanged.connect(self.update_button_states)
-        self.lineEdit_2.textChanged.connect(self.update_button_states)
+        self.textEdit.textChanged.connect(self.update_button_states)
+        self.textEdit_2.textChanged.connect(self.update_button_states)
 
         self.update_button_states()
 
@@ -80,19 +80,20 @@ class Mine_App(QWidget, Ui_Widget):
     def save_to_json(self):
         data = {
             "config": {
-                "use_time":self.checkBox.isChecked(),
-                "run_shuffle":self.checkBox_2.isChecked(),
-                "th_test":self.lineEdit_3.text().strip(),
-                "taylor_sig":self.lineEdit_5.text().strip(),
-                "taylor_cut":self.lineEdit_6.text().strip(),
-                "th_lax":self.lineEdit_7.text().strip(),
-                "th_sqr":self.lineEdit_8.text().strip(),
-                "history":self.lineEdit_9.text().strip(),
-                "taylor_look":self.lineEdit_11.text().strip(),
-                "jacobian":self.checkBox_4.isChecked(),
-                "n_epochs":self.lineEdit_12.text().strip(),
-                "miner_verbose":self.checkBox_3.isChecked(),
-                "miner_train_fraction":self.lineEdit_13.text().strip()
+                "episodic":self.checkBox.isChecked(),
+                "use_time":self.checkBox_2.isChecked(),
+                "run_shuffle":self.checkBox_5.isChecked(),
+                "th_test":self.lineEdit_2.text().strip(),
+                "taylor_sig":self.lineEdit_3.text().strip(),
+                "taylor_cut":self.lineEdit_5.text().strip(),
+                "th_lax":self.lineEdit_6.text().strip(),
+                "th_sqr":self.lineEdit_7.text().strip(),
+                "history":self.lineEdit_8.text().strip(),
+                "taylor_look":self.lineEdit_4.text().strip(),
+                "jacobian":self.checkBox_3.isChecked(),
+                "n_epochs":self.lineEdit_9.text().strip(),
+                "miner_verbose":self.checkBox_4.isChecked(),
+                "miner_train_fraction":self.lineEdit_10.text().strip()
                 }
         }
 
@@ -117,7 +118,8 @@ class Mine_App(QWidget, Ui_Widget):
             self.last_dir = os.path.dirname(file_path)
 
     def handle_json_browse(self, target_lineedit):
-        file_path, _ = QFileDialog.getOpenFileName(self, "Select JSON File", "", "JSON Files (*.json)")
+        file_path, _ = QFileDialog.getOpenFileName(self, "Select JSON File", "", "JSON Files (*.json)",
+        options=QFileDialog.DontUseNativeDialog)
         if file_path:
             target_lineedit.setText(file_path)
             self.load_json_and_populate(file_path)
@@ -132,25 +134,26 @@ class Mine_App(QWidget, Ui_Widget):
             QMessageBox.critical(self, "Error", f"Could not read JSON:\n{e}")
             return
 
-        self.checkBox.setChecked(data.get("use_time", default_options["use_time"]))
-        self.checkBox_2.setChecked(data.get("run_shuffle", default_options["run_shuffle"]))
-        self.lineEdit_3.setText(str(data.get("th_test", default_options["th_test"])))
-        self.lineEdit_5.setText(str(data.get("taylor_sig", default_options["taylor_sig"])))
-        self.lineEdit_6.setText(str(data.get("taylor_cut", default_options["taylor_cut"])))
-        self.lineEdit_7.setText(str(data.get("th_lax", default_options["th_lax"])))
-        self.lineEdit_8.setText(str(data.get("th_sqr", default_options["th_sqr"])))
-        self.lineEdit_9.setText(str(data.get("history", default_options["history"])))
-        self.lineEdit_11.setText(str(data.get("taylor_look", default_options["taylor_look"])))
-        self.checkBox_4.setChecked(data.get("jacobian", default_options["jacobian"]))
-        self.lineEdit_12.setText(str(data.get("n_epochs", default_options["n_epochs"])))
-        self.checkBox_3.setChecked(data.get("miner_verbose", default_options["miner_verbose"]))
-        self.lineEdit_13.setText(str(data.get("miner_train_fraction", default_options["miner_train_fraction"])))
+        self.checkBox.setChecked(data.get("episodic", default_options["episodic"]))
+        self.checkBox_2.setChecked(data.get("use_time", default_options["use_time"]))
+        self.checkBox_5.setChecked(data.get("run_shuffle", default_options["run_shuffle"]))
+        self.lineEdit_2.setText(str(data.get("th_test", default_options["th_test"])))
+        self.lineEdit_3.setText(str(data.get("taylor_sig", default_options["taylor_sig"])))
+        self.lineEdit_5.setText(str(data.get("taylor_cut", default_options["taylor_cut"])))
+        self.lineEdit_6.setText(str(data.get("th_lax", default_options["th_lax"])))
+        self.lineEdit_7.setText(str(data.get("th_sqr", default_options["th_sqr"])))
+        self.lineEdit_8.setText(str(data.get("history", default_options["history"])))
+        self.lineEdit_4.setText(str(data.get("taylor_look", default_options["taylor_look"])))
+        self.checkBox_3.setChecked(data.get("jacobian", default_options["jacobian"]))
+        self.lineEdit_9.setText(str(data.get("n_epochs", default_options["n_epochs"])))
+        self.checkBox_4.setChecked(data.get("miner_verbose", default_options["miner_verbose"]))
+        self.lineEdit_10.setText(str(data.get("miner_train_fraction", default_options["miner_train_fraction"])))
 
     def update_button_states(self):
         all_valid = all(self.valid_fields.values())
 
-        line4_filled = bool(self.lineEdit_4.text().strip())
-        line2_filled = bool(self.lineEdit_2.text().strip())
+        line4_filled = bool(self.textEdit.toPlainText().strip())
+        line2_filled = bool(self.textEdit_2.toPlainText().strip())
         required_fields_filled = line4_filled and line2_filled
 
         self.pushButton.setEnabled(all_valid and required_fields_filled)
@@ -161,61 +164,63 @@ class Mine_App(QWidget, Ui_Widget):
         """Restore UI elements to their default preset values."""
         global default_options
 
-        self.checkBox.setChecked(default_options["use_time"])
-        self.checkBox_2.setChecked(default_options["run_shuffle"])
-        self.lineEdit_3.setText(str(default_options["th_test"]))
-        self.lineEdit_5.setText(str(default_options["taylor_sig"]))
-        self.lineEdit_11.setText(str(default_options["taylor_look"]))
-        self.lineEdit_6.setText(str(default_options["taylor_cut"]))
-        self.lineEdit_7.setText(str(default_options["th_lax"]))
-        self.lineEdit_8.setText(str(default_options["th_sqr"]))
-        self.checkBox_4.setChecked(default_options["jacobian"])
-        self.lineEdit_9.setText(str(default_options["history"]))
-        self.lineEdit_12.setText(str(default_options["n_epochs"]))
-        self.lineEdit_13.setText(str(default_options["miner_train_fraction"]))
-        self.checkBox_3.setChecked(True)
+        self.checkBox.setChecked(default_options["episodic"])
+        self.checkBox_2.setChecked(default_options["use_time"])
+        self.checkBox_5.setChecked(default_options["run_shuffle"])
+        self.lineEdit_2.setText(str(default_options["th_test"]))
+        self.lineEdit_3.setText(str(default_options["taylor_sig"]))
+        self.lineEdit_4.setText(str(default_options["taylor_look"]))
+        self.lineEdit_5.setText(str(default_options["taylor_cut"]))
+        self.lineEdit_6.setText(str(default_options["th_lax"]))
+        self.lineEdit_7.setText(str(default_options["th_sqr"]))
+        self.checkBox_3.setChecked(default_options["jacobian"])
+        self.lineEdit_8.setText(str(default_options["history"]))
+        self.lineEdit_9.setText(str(default_options["n_epochs"]))
+        self.lineEdit_10.setText(str(default_options["miner_train_fraction"]))
+        self.checkBox_4.setChecked(True)
 
         self.reset_validation_state()
 
     def reset_validation_state(self):
         """Resets line edit colors and re-enables buttons after restoring defaults."""
-        for widget in [self.lineEdit_3, self.lineEdit_5, self.lineEdit_11,
-                       self.lineEdit_6, self.lineEdit_7, self.lineEdit_8,
-                       self.lineEdit_9, self.lineEdit_12, self.lineEdit_13]:
+        for widget in [self.lineEdit_2, self.lineEdit_3, self.lineEdit_4,
+                       self.lineEdit_5, self.lineEdit_6, self.lineEdit_7,
+                       self.lineEdit_8, self.lineEdit_9, self.lineEdit_10]:
             widget.setPalette(self.style().standardPalette())
 
         for le, minv, maxv in [
+            (self.lineEdit_2, 0, 1),
             (self.lineEdit_3, 0, 1),
+            (self.lineEdit_4, 0.00000001, 3.999999999),
             (self.lineEdit_5, 0, 1),
-            (self.lineEdit_11, 0.00000001, 3.999999999),
             (self.lineEdit_6, 0, 1),
             (self.lineEdit_7, 0, 1),
-            (self.lineEdit_8, 0, 1),
-            (self.lineEdit_9, 1.0, np.inf),
-            (self.lineEdit_12, 0, 100),
-            (self.lineEdit_13, 0, 1)
+            (self.lineEdit_8, 1.0, np.inf),
+            (self.lineEdit_9, 0, 100),
+            (self.lineEdit_10, 0, 1)
         ]:
             le.editingFinished.connect(lambda le=le, minv=minv, maxv=maxv: uu.validate_range(le, minv, maxv))
 
     def on_run_clicked(self):
 
         model_name = self.lineEdit.text()
-        predictors = self.lineEdit_4.text()
-        responses = self.lineEdit_2.text()
-        use_time = self.checkBox.isChecked()
-        run_shuffle = self.checkBox_2.isChecked()
-        th_test = self.lineEdit_3.text()
-        taylor_sig = self.lineEdit_5.text()
-        taylor_cut = self.lineEdit_6.text()
-        th_lax = self.lineEdit_7.text()
-        th_sqr = self.lineEdit_8.text()
-        history = self.lineEdit_9.text()
-        taylor_look = self.lineEdit_11.text()
-        jacobian = self.checkBox_4.isChecked()
-        config = self.lineEdit_10.text()
-        n_epochs = self.lineEdit_12.text()
-        miner_verbose = self.checkBox_3.isChecked()
-        miner_train_fraction = self.lineEdit_13.text()
+        predictors = self.textEdit.toPlainText().strip().split()
+        responses = self.textEdit_2.toPlainText().strip().split()
+        episodic = self.checkBox.isChecked()
+        use_time = self.checkBox_2.isChecked()
+        run_shuffle = self.checkBox_5.isChecked()
+        th_test = self.lineEdit_2.text()
+        taylor_sig = self.lineEdit_3.text()
+        taylor_cut = self.lineEdit_5.text()
+        th_lax = self.lineEdit_6.text()
+        th_sqr = self.lineEdit_7.text()
+        history = self.lineEdit_8.text()
+        taylor_look = self.lineEdit_4.text()
+        jacobian = self.checkBox_3.isChecked()
+        config = self.lineEdit_11.text()
+        n_epochs = self.lineEdit_9.text()
+        miner_verbose = self.checkBox_4.isChecked()
+        miner_train_fraction = self.lineEdit_10.text()
 
         with importlib.resources.path("neuro_mine.scripts", "process_csv.py") as script_path:
             args = [sys.executable, str(script_path)]
@@ -223,9 +228,11 @@ class Mine_App(QWidget, Ui_Widget):
             if model_name:
                 args.extend(["--model_name", model_name])
             if predictors:
-                args.extend(["--predictors", predictors])
+                args.append("--predictors")
+                args.extend(predictors)
             if responses:
-                args.extend(["--responses", responses])
+                args.append("--responses")
+                args.extend(responses)
             if use_time:
                 args.extend(["--use_time"])
             if run_shuffle:
