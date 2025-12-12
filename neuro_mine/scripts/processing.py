@@ -286,8 +286,8 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
         standardized_predictors, m_pred, s_pred = safe_standardize(ip_pred_data, axis=0)
         if not time_as_pred:
             standardized_predictors = standardized_predictors[:, 1:]
-            m_pred = m_pred[1:]
-            s_pred = s_pred[1:]
+            m_pred = m_pred[:, 1:]
+            s_pred = s_pred[:, 1:]
         mine_pred = [sipd for sipd in standardized_predictors.T]
         # In the following the first column is removed since it is time
         if not is_spike_data:
@@ -303,8 +303,8 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
         standardized_predictors, m_pred, s_pred = safe_standardize_episodic(ip_pred_data, axis=0)
         if not time_as_pred:
             standardized_predictors = [sp[:, 1:] for sp in standardized_predictors]
-            m_pred = m_pred[1:]
-            s_pred = s_pred[1:]
+            m_pred = m_pred[:, 1:]
+            s_pred = s_pred[:, 1:]
         mine_pred = [[sipd for sipd in standardized_predictors[i].T] for i in range(len(standardized_predictors))]
         if not is_spike_data:
             mine_resp, m_resp, s_resp = safe_standardize_episodic([ipr[:, 1:] for ipr in ip_resp_data], axis=0)
