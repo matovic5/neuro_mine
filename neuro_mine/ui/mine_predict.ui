@@ -118,14 +118,14 @@
       </font>
      </property>
      <property name="text">
-      <string>Updated Model</string>
+      <string>Prediction Parameters</string>
      </property>
     </widget>
    </item>
    <item row="6" column="0">
     <widget class="QLabel" name="label_8">
      <property name="text">
-      <string>Model Name:</string>
+      <string>Prediction Name:</string>
      </property>
     </widget>
    </item>
@@ -135,7 +135,7 @@
    <item row="7" column="0" colspan="2">
     <widget class="QLabel" name="label_9">
      <property name="text">
-      <string>Taylor Expansion Significance Threshold:</string>
+      <string>Test Threshold Cutoff:</string>
      </property>
     </widget>
    </item>

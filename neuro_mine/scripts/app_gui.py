@@ -1,7 +1,7 @@
 import datetime
 import importlib.resources
 import json
-from PySide6.QtGui import QPalette, QColor
+from PySide6.QtGui import QPalette, QColor, QIntValidator, QDoubleValidator
 from PySide6.QtWidgets import QApplication, QWidget, QFileDialog, QLineEdit, QCheckBox, QMessageBox
 from neuro_mine.ui.mine_form import Ui_Form
 import neuro_mine.ui.ui_utilities as uu
@@ -18,10 +18,14 @@ class Mine_App(QWidget, Ui_Form):
         self.default_options = default_options
 
         now = datetime.datetime.now().strftime("%b%d%Y_%I%M%p")
+        validator = QDoubleValidator(0.0, 1.0, 2 ,self)
+        validator.setNotation(QDoubleValidator.Notation.StandardNotation)
+
         self.lineEdit.setText(now) # Model Name
         self.checkBox_2.setChecked(default_options["use_time"]) # Use Time as Predictor
         self.checkBox_5.setChecked(default_options["run_shuffle"]) # Shuffle Data
-        self.lineEdit_2.setText(str(default_options["th_test"])) # Test Score Threshold
+        self.lineEdit_2.setValidator(validator) # validate that test score threshold is only 2 decimal places
+        self.lineEdit_2.setText(f"{float(default_options['th_test']):.2f}") # Test Score Threshold
         self.lineEdit_3.setText(str(default_options["taylor_sig"])) # Taylor Expansion Significance Threshold
         self.lineEdit_4.setText(str(default_options["taylor_look"]))  # Taylor Look Ahead
         self.lineEdit_5.setText(str(default_options["taylor_cut"])) # Taylor Cutoff
@@ -29,8 +33,9 @@ class Mine_App(QWidget, Ui_Form):
         self.lineEdit_7.setText(str(default_options["th_sqr"])) # Square Fit Variance explained cutoff
         self.checkBox_3.setChecked(default_options["jacobian"]) # Store Linear Receptive Fields (Jacobians)
         self.lineEdit_8.setText(str(default_options["history"])) # Model History [s]
+        self.lineEdit_9.setValidator(QIntValidator(1, 100, self)) # limit epochs to integers
         self.lineEdit_9.setText(str(default_options["n_epochs"])) # Number of Epochs
-        self.lineEdit_10.setText(str(default_options["miner_train_fraction"])) # Fraction of Data to use to Train
+        self.lineEdit_10.setText(str(default_options["miner_train_fraction"])) # Number of Epochs # Fraction of Data to use to Train
         self.checkBox_4.setChecked(True) # Verbose Fitting Updates
 
         # connect signals
@@ -51,7 +56,7 @@ class Mine_App(QWidget, Ui_Form):
             (self.lineEdit_6, 0, 1),
             (self.lineEdit_7, 0, 1),
             (self.lineEdit_8, 1.0, np.inf),
-            (self.lineEdit_9, 0, 100),
+            (self.lineEdit_9, 1, 100),
             (self.lineEdit_10, 0, 1)
         ]:
             le.editingFinished.connect(
@@ -237,6 +242,8 @@ class Mine_App(QWidget, Ui_Form):
                 args.extend(["--use_time"])
             if run_shuffle:
                 args.extend(["--run_shuffle"])
+            if episodic:
+                args.extend(["--episodic"])
             if th_test:
                 args.extend(["--th_test", th_test])
             if taylor_sig:

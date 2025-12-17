@@ -162,9 +162,9 @@ class Ui_Widget(object):
         self.pushButton_4.setText(QCoreApplication.translate("Widget", u"Browse...", None))
         self.label_5.setText(QCoreApplication.translate("Widget", u"Configuration File Path:", None))
         self.pushButton_3.setText(QCoreApplication.translate("Widget", u"Browse...", None))
-        self.label_7.setText(QCoreApplication.translate("Widget", u"Updated Model", None))
-        self.label_8.setText(QCoreApplication.translate("Widget", u"Model Name:", None))
-        self.label_9.setText(QCoreApplication.translate("Widget", u"Taylor Expansion Significance Threshold:", None))
+        self.label_7.setText(QCoreApplication.translate("Widget", u"Prediction Parameters", None))
+        self.label_8.setText(QCoreApplication.translate("Widget", u"Prediction Name:", None))
+        self.label_9.setText(QCoreApplication.translate("Widget", u"Test Threshold Cutoff:", None))
         self.label_10.setText(QCoreApplication.translate("Widget", u"[-1,1]", None))
         self.pushButton_5.setText(QCoreApplication.translate("Widget", u"Predict Responses", None))
     # retranslateUi

@@ -30,7 +30,8 @@ default_options = {
     "jacobian": False,
     "n_epochs": 100,
     "miner_verbose": False,
-    "miner_train_fraction": 2.0/3
+    "miner_train_fraction": 0.8,
+    "episodic": False
 }
 
 
@@ -68,6 +69,7 @@ if __name__ == '__main__':
     a_parser.add_argument("-lsq", "--th_sqr", help="The threshold of variance explained by the 2nd order"
                                                   "approximation to consider the fit 2nd order.",
                           type=float, default=default_options['th_sqr'])
+    a_parser.add_argument("-n", "--model_name", help="Name of model for file saving purposes.", type=str)
     a_parser.add_argument("-n", "--model_name", help="Name of model for file saving purposes.", type=str)
     a_parser.add_argument("-mh", "--history", help="The length of model history in time units.",
                           type=float, default=default_options['history'])
