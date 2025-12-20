@@ -10,7 +10,7 @@ Welcome to MINE: your handy companion for processing neuronal response data! Thi
 <br>- Generate response predictions from new predictors use an existing model
 
 *Constraint:*
-<br>- Data must be continuous in time, and time must be monotonically increasing
+<br>- Within episodes, data must be continuous in time, and time must be monotonically increasing
 
 Predictor and Response File Requirements:
 <br>- FIle type is .csv with any kind of delimiter
@@ -18,10 +18,10 @@ Predictor and Response File Requirements:
 <br>- Reponse data **must** have time as the first column and the responses must be in adjacent columns; column titles (a header) are supported but are not mandatory
 
 *Authors:*
-<br>Dr. Martin Haesemeyer
 <br>Danica Matovic
+<br>Martin Haesemeyer
 <br>Jamie Costabile
-<br>Dr. Kaarthik Balakrishnan
+<br>Kaarthik Balakrishnan
 <br>Sina Schwinn
 
 # Quick Start
