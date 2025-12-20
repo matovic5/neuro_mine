@@ -16,14 +16,15 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QDialog, QGridLayout, QLabel,
-    QLineEdit, QPushButton, QSizePolicy, QWidget)
+    QLineEdit, QPushButton, QSizePolicy, QTextEdit,
+    QWidget)
 import neuro_mine.ui.resources_rc
 
 class Ui_Widget(object):
     def setupUi(self, Widget):
         if not Widget.objectName():
             Widget.setObjectName(u"Widget")
-        Widget.resize(489, 314)
+        Widget.resize(489, 356)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -79,11 +80,6 @@ class Ui_Widget(object):
         self.label_6.setObjectName(u"label_6")
 
         self.gridLayout.addWidget(self.label_6, 3, 0, 1, 1)
-
-        self.lineEdit_4 = QLineEdit(Widget)
-        self.lineEdit_4.setObjectName(u"lineEdit_4")
-
-        self.gridLayout.addWidget(self.lineEdit_4, 3, 1, 1, 3)
 
         self.pushButton_4 = QPushButton(Widget)
         self.pushButton_4.setObjectName(u"pushButton_4")
@@ -141,6 +137,11 @@ class Ui_Widget(object):
 
         self.gridLayout.addWidget(self.pushButton_5, 8, 3, 1, 2)
 
+        self.textEdit = QTextEdit(Widget)
+        self.textEdit.setObjectName(u"textEdit")
+
+        self.gridLayout.addWidget(self.textEdit, 3, 1, 1, 3)
+
 
         self.retranslateUi(Widget)
 
@@ -158,7 +159,7 @@ class Ui_Widget(object):
         self.pushButton.setText(QCoreApplication.translate("Widget", u"Browse...", None))
         self.label_4.setText(QCoreApplication.translate("Widget", u"Analysis File Path:", None))
         self.pushButton_2.setText(QCoreApplication.translate("Widget", u"Browse...", None))
-        self.label_6.setText(QCoreApplication.translate("Widget", u"Predictor File Path:", None))
+        self.label_6.setText(QCoreApplication.translate("Widget", u"Predictor File Path(s):", None))
         self.pushButton_4.setText(QCoreApplication.translate("Widget", u"Browse...", None))
         self.label_5.setText(QCoreApplication.translate("Widget", u"Configuration File Path:", None))
         self.pushButton_3.setText(QCoreApplication.translate("Widget", u"Browse...", None))

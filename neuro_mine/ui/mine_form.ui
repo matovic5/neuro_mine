@@ -16,6 +16,11 @@
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
+  <property name="font">
+   <font>
+    <family>.AppleSystemUIFont</family>
+   </font>
+  </property>
   <property name="windowTitle">
    <string>Neuro MINE</string>
   </property>
@@ -448,7 +453,7 @@
     <rect>
      <x>10</x>
      <y>350</y>
-     <width>611</width>
+     <width>612</width>
      <height>166</height>
     </rect>
    </property>
@@ -773,7 +778,7 @@
         <item>
          <widget class="QLabel" name="label_27">
           <property name="text">
-           <string>[1,100]</string>
+           <string>{1,...,100}</string>
           </property>
          </widget>
         </item>

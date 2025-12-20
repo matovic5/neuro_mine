@@ -2,7 +2,7 @@
 Module with common UI functions for main app and predict app
 """
 
-from PySide6.QtWidgets import QFileDialog, QLineEdit, QTextEdit
+from PySide6.QtWidgets import QFileDialog, QLineEdit, QTextEdit, QMessageBox
 from PySide6.QtGui import QPalette, QColor
 
 def browse_multiple_files(parent, target_textedit, file_type, file_filter, last_dir):

@@ -15,7 +15,7 @@ class Predict_App(QWidget, Ui_Widget):
         self.pushButton.clicked.connect(lambda: uu.browse_file(self, self.lineEdit, "Weights File", "*.hdf5", self.last_dir))
         self.pushButton_2.clicked.connect(lambda: uu.browse_file(self, self.lineEdit_2, "Analysis File", "*.hdf5", self.last_dir))
         self.pushButton_3.clicked.connect(lambda: self.handle_json_browse(self.lineEdit_3))
-        self.pushButton_4.clicked.connect(lambda: uu.browse_file(self, self.lineEdit_4, "Predictor File ", "*.csv", self.last_dir))
+        self.pushButton_4.clicked.connect(lambda: uu.browse_multiple_files(self, self.textEdit, "Predictor File(s)", "*.csv", self.last_dir))
         self.pushButton_5.clicked.connect(self.on_run_clicked)
 
         self.lineEdit_6.setText("-1") # Test Score Threshold
@@ -31,12 +31,12 @@ class Predict_App(QWidget, Ui_Widget):
 
         self.last_dir = ""
 
-        self.lineEdit.textChanged.connect(self.update_button_states)
-        self.lineEdit_2.textChanged.connect(self.update_button_states)
-        self.lineEdit_3.textChanged.connect(self.update_button_states)
-        self.lineEdit_4.textChanged.connect(self.update_button_states)
-        self.lineEdit_5.textChanged.connect(self.update_button_states)
-        self.lineEdit_6.textChanged.connect(self.update_button_states)
+        self.lineEdit.textChanged.connect(self.update_button_states) # weights file
+        self.lineEdit_2.textChanged.connect(self.update_button_states) # analysis file
+        self.lineEdit_3.textChanged.connect(self.update_button_states) # configuration file path
+        self.textEdit.textChanged.connect(self.update_button_states) # predictor filepath(s)
+        self.lineEdit_5.textChanged.connect(self.update_button_states) # name
+        self.lineEdit_6.textChanged.connect(self.update_button_states) # test threshold cutoff
 
         self.update_button_states()
 
@@ -64,20 +64,21 @@ class Predict_App(QWidget, Ui_Widget):
     def update_button_states(self):
         all_valid = all(self.valid_fields.values())
 
-        required_fields_filled = all(bool(le.text().strip()) for le in [
+        line_edits_filled = all(bool(le.text().strip()) for le in [
             self.lineEdit,
             self.lineEdit_2,
             self.lineEdit_3,
-            self.lineEdit_4,
             self.lineEdit_5,
             self.lineEdit_6
         ])
 
-        self.pushButton_5.setEnabled(all_valid and required_fields_filled)
+        text_filled = bool(self.textEdit.toPlainText().strip())
+
+        self.pushButton_5.setEnabled(all_valid and line_edits_filled and text_filled)
 
     def on_run_clicked(self):
 
-        predictors = self.lineEdit_4.text()
+        predictors = self.textEdit.toPlainText().strip().split()
         config = self.lineEdit_3.text()
         weights = self.lineEdit.text()
         analysis = self.lineEdit_2.text()
@@ -87,7 +88,8 @@ class Predict_App(QWidget, Ui_Widget):
             args = [sys.executable, str(script_path)]
 
             if predictors:
-                args.extend(["--predictors", predictors])
+                args.append("--predictors")
+                args.extend(predictors)
             if config:
                 args.extend(["--config", config])
             if weights:
