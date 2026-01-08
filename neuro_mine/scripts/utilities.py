@@ -82,31 +82,6 @@ def bootstrap_fractional_r2loss(real: np.ndarray, predicted: np.ndarray, remaind
     return output
 
 
-def bootstrap_binned_average(x: np.ndarray, weights: np.ndarray, bins: np.ndarray, n_boot: int) -> np.ndarray:
-    """
-    Returns bootstrap samples for a weighted histogram (i.e. average of a quantity based on bins of another quantity)
-    :param x: The quantity to bin by
-    :param weights: The quantity to average
-    :param bins: Array of bin boundaries
-    :param n_boot: The number of bootstrap samples to generate
-    :return: n_boot x (bins.size-1) matrix of binned average bootstrap samples
-    """
-    if x.ndim > 1 or weights.ndim > 1:
-        raise ValueError("Only 1D vectors are supported for x and weights")
-    if x.size != weights.size:
-        raise ValueError("Each x sample must have an associated weight")
-    output = np.empty((n_boot, bins.size - 1))
-    indices = np.arange(x.size)
-    for i in range(n_boot):
-        choose = np.random.choice(indices, indices.size, replace=True)
-        x_bs = x[choose]
-        w_bs = weights[choose]
-        weighted_count = np.histogram(x_bs, bins, weights=w_bs)[0].astype(float)
-        count = np.histogram(x_bs, bins)[0].astype(float)
-        output[i, :] = weighted_count / count
-    return output
-
-
 def bootstrap(data: np.ndarray, nboot: int, bootfun: callable) -> np.ndarray:
     """
     For a a n_samples x m_features array creates nboot bootstrap variates of bootfun
@@ -211,27 +186,6 @@ def barcode_cluster(x: np.ndarray, threshold: Union[float, np.ndarray]) -> np.nd
     for i, clust in enumerate(reversed(clustered_indices)):
         cluster_numbers[clust] = i
     return cluster_numbers
-
-
-def create_coordinate_grid_points(x: np.ndarray, y: np.ndarray, z: Optional[np.ndarray]) -> np.ndarray:
-    """
-    Creates linearized grid of all coordinate pairs
-    :param x: Vector of x coordinates in the grid
-    :param y: Vector of y coordinates in the grid
-    :param z: None or vector of z coordinates in the grid
-    :return: n x 2 or n x 3 matrix of all points in the grid
-    """
-    if z is None:
-        xv, yv = np.meshgrid(x, y)
-        xv = xv.reshape((np.prod(xv.shape),))
-        yv = yv.reshape((np.prod(yv.shape),))
-        return np.hstack((xv[:, None], yv[:, None]))
-    else:
-        xv, yv, zv = np.meshgrid(x, y, z)
-        xv = xv.reshape((np.prod(xv.shape),))
-        yv = yv.reshape((np.prod(yv.shape),))
-        zv = zv.reshape((np.prod(zv.shape),))
-        return np.hstack((xv[:, None], yv[:, None], zv[:, None]))
 
 
 @njit
