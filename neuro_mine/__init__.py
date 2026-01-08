@@ -1,9 +1,9 @@
-from .scripts.processing import ip_time_proposal, episodic_interpolation, joint_interpolation, generate_insights, barcode_cluster_plot, process_paired_files
-from .scripts.mine import Mine, BaseData, MineData, MineSpikingData, _Outputs
-from .scripts.taylorDecomp import d2ca_dr2, taylor_predict, _taylor_predict, _compute_taylor_d2, _compute_by_reg, taylor_decompose, data_mean_prediction, complexity_scores
+from .scripts.processing import generate_insights, barcode_cluster_plot
+from .scripts.mine import Mine, BaseData, MineData, MineSpikingData, MineWarning
+from .scripts.taylorDecomp import dca_dr, d2ca_dr2, taylor_predict, taylor_decompose, data_mean_prediction, complexity_scores
 from .scripts.model import ActivityPredictor, train_model, get_standard_model
-from .scripts.utilities import (create_overwrite, modelweights_to_hdf5, modelweights_from_hdf5, bootstrap_fractional_r2loss, bootstrap_binned_average, bootstrap, safe_standardize,
-                                safe_standardize_episodic, barcode_cluster, create_coordinate_grid_points, rearrange_hessian, simulate_response, modified_gram_schmidt, sigmoid,
+from .scripts.utilities import (create_overwrite, modelweights_to_hdf5, modelweights_from_hdf5, bootstrap, safe_standardize,
+                                safe_standardize_episodic, barcode_cluster, rearrange_hessian, simulate_response, modified_gram_schmidt, sigmoid,
                                 interp_events, EpisodicData, Data)
 
 __all__ = ["Data",
@@ -13,12 +13,9 @@ __all__ = ["Data",
            "modified_gram_schmidt",
            "simulate_response",
            "rearrange_hessian",
-           "create_coordinate_grid_points",
            "safe_standardize_episodic",
            "safe_standardize",
            "bootstrap",
-           "bootstrap_binned_average",
-           "bootstrap_fractional_r2loss",
            "modelweights_from_hdf5",
            "modelweights_to_hdf5",
            "create_overwrite",
@@ -28,19 +25,13 @@ __all__ = ["Data",
            "complexity_scores",
            "data_mean_prediction",
            "taylor_decompose",
-           "_compute_by_reg",
-           "_compute_taylor_d2",
-           "_taylor_predict",
            "taylor_predict",
+           "dca_dr",
            "d2ca_dr2",
-           "ip_time_proposal",
-           "episodic_interpolation",
-           "joint_interpolation",
            "generate_insights",
            "barcode_cluster_plot",
-           "process_paired_files",
            "Mine",
            "BaseData",
            "MineData",
            "MineSpikingData",
-           "_Outputs"]
+           "MineWarning"]
