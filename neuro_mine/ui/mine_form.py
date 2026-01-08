@@ -530,7 +530,7 @@ class Ui_Form(object):
         self.label_21.setText("")
         self.label_5.setText(QCoreApplication.translate("Form", u"Episodic Data:", None))
         self.checkBox.setText(QCoreApplication.translate("Form", u"Yes", None))
-        self.label_6.setText(QCoreApplication.translate("Form", u"Uee Time as a Predictor:", None))
+        self.label_6.setText(QCoreApplication.translate("Form", u"Use Time as a Predictor:", None))
         self.checkBox_2.setText(QCoreApplication.translate("Form", u"Yes", None))
         self.label_18.setText(QCoreApplication.translate("Form", u"Verbose:", None))
         self.checkBox_4.setText(QCoreApplication.translate("Form", u"Yes", None))

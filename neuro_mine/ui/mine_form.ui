@@ -296,7 +296,7 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>Uee Time as a Predictor:</string>
+         <string>Use Time as a Predictor:</string>
         </property>
        </widget>
       </item>

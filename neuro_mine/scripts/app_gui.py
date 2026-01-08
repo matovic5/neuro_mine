@@ -15,6 +15,7 @@ class Mine_App(QWidget, Ui_Form):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+        self.lineEdit.setFocus()
         self.default_options = default_options
 
         now = datetime.datetime.now().strftime("%b%d%Y_%I%M%p")

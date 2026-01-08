@@ -4,10 +4,10 @@ import pandas as pd
 from os import path
 import os
 import h5py
-import file_handling as fh
+from neuro_mine.scripts import file_handling as fh
 import json
-from utilities import safe_standardize, interp_events, safe_standardize_episodic
-from mine import Mine, MineData, MineSpikingData
+from neuro_mine.scripts.utilities import safe_standardize, interp_events, safe_standardize_episodic
+from neuro_mine.scripts.mine import Mine, MineData, MineSpikingData
 import upsetplot as ups
 import matplotlib.pyplot as pl
 from warnings import filterwarnings

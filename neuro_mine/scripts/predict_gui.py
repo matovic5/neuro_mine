@@ -1,4 +1,3 @@
-import datetime
 import importlib.resources
 import json
 from PySide6.QtWidgets import QApplication, QWidget, QLineEdit, QMessageBox, QFileDialog
@@ -11,6 +10,8 @@ class Predict_App(QWidget, Ui_Widget):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+
+        self.lineEdit.setFocus()
 
         self.pushButton.clicked.connect(lambda: uu.browse_file(self, self.lineEdit, "Weights File", "*.hdf5", self.last_dir))
         self.pushButton_2.clicked.connect(lambda: uu.browse_file(self, self.lineEdit_2, "Analysis File", "*.hdf5", self.last_dir))
@@ -35,7 +36,6 @@ class Predict_App(QWidget, Ui_Widget):
         self.lineEdit_2.textChanged.connect(self.update_button_states) # analysis file
         self.lineEdit_3.textChanged.connect(self.update_button_states) # configuration file path
         self.textEdit.textChanged.connect(self.update_button_states) # predictor filepath(s)
-        self.lineEdit_5.textChanged.connect(self.update_button_states) # name
         self.lineEdit_6.textChanged.connect(self.update_button_states) # test threshold cutoff
 
         self.update_button_states()
@@ -58,9 +58,6 @@ class Predict_App(QWidget, Ui_Widget):
             QMessageBox.critical(self, "Error", f"Could not read JSON:\n{e}")
             return
 
-        now = datetime.datetime.now().strftime("%b%d%Y_%I%M%p")
-        self.lineEdit_5.setText(str(data.get("model_name", "prediction_model"))+"_predicition_"+now)
-
     def update_button_states(self):
         all_valid = all(self.valid_fields.values())
 
@@ -68,7 +65,6 @@ class Predict_App(QWidget, Ui_Widget):
             self.lineEdit,
             self.lineEdit_2,
             self.lineEdit_3,
-            self.lineEdit_5,
             self.lineEdit_6
         ])
 

@@ -70,7 +70,6 @@ if __name__ == '__main__':
                                                   "approximation to consider the fit 2nd order.",
                           type=float, default=default_options['th_sqr'])
     a_parser.add_argument("-n", "--model_name", help="Name of model for file saving purposes.", type=str)
-    a_parser.add_argument("-n", "--model_name", help="Name of model for file saving purposes.", type=str)
     a_parser.add_argument("-mh", "--history", help="The length of model history in time units.",
                           type=float, default=default_options['history'])
     a_parser.add_argument("-tl", "--taylor_look", help="Determines taylor look ahead as multiplier of history",
