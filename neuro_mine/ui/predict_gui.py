@@ -80,7 +80,7 @@ class Predict_App(QWidget, Ui_Widget):
         analysis = self.lineEdit_2.text()
         th_test = self.lineEdit_6.text()
 
-        with importlib.resources.path("neuro_mine.scripts", "response_prediction.py") as script_path:
+        with importlib.resources.path("neuro_mine.scripts", "neuromine_prediction.py") as script_path:
             args = [sys.executable, str(script_path)]
 
             if predictors:

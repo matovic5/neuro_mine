@@ -1,8 +1,8 @@
-from .scripts.processing import generate_insights, barcode_cluster_plot
-from .scripts.mine import Mine, BaseData, MineData, MineSpikingData, MineWarning
-from .scripts.taylorDecomp import dca_dr, d2ca_dr2, taylor_predict, taylor_decompose, data_mean_prediction, complexity_scores
-from .scripts.model import ActivityPredictor, train_model, get_standard_model
-from .scripts.utilities import (create_overwrite, modelweights_to_hdf5, modelweights_from_hdf5, bootstrap, safe_standardize,
+from .lib.processing import generate_insights, barcode_cluster_plot
+from .lib.mine import Mine, BaseData, MineData, MineSpikingData, MineWarning
+from .lib.taylorDecomp import dca_dr, d2ca_dr2, taylor_predict, taylor_decompose, data_mean_prediction, complexity_scores
+from .lib.model import ActivityPredictor, train_model, get_standard_model
+from .lib.utilities import (create_overwrite, modelweights_to_hdf5, modelweights_from_hdf5, bootstrap, safe_standardize,
                                 safe_standardize_episodic, barcode_cluster, rearrange_hessian, simulate_response, modified_gram_schmidt, sigmoid,
                                 interp_events, EpisodicData, Data)
 

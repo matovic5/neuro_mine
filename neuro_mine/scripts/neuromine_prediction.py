@@ -6,15 +6,15 @@ import argparse
 import pandas as pd
 import h5py
 import os
-import file_handling as fh
+import neuro_mine.lib.file_handling as fh
 import json
 from os import path
-from process_csv import ConfigException
+from neuro_mine.scripts.neuromine_fit import ConfigException
 from warnings import warn
 import numpy as np
 from typing import Optional
-from utilities import modelweights_from_hdf5, simulate_response
-import model
+from neuro_mine.lib.utilities import modelweights_from_hdf5, simulate_response
+from neuro_mine.lib import model
 
 if __name__ == '__main__':
     # the following will prevent tensorflow from using the GPU - as the used models have very low complexity

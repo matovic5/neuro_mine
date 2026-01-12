@@ -4,9 +4,9 @@ Module for easy running of MINE on user data
 import h5py
 import numpy as np
 from typing import List, Optional, Union
-import neuro_mine.scripts.utilities as utilities
-import neuro_mine.scripts.model as model
-from neuro_mine.scripts.taylorDecomp import taylor_decompose, d2ca_dr2, complexity_scores, data_mean_prediction
+from neuro_mine.lib import utilities
+from neuro_mine.lib import model
+from neuro_mine.lib.taylorDecomp import taylor_decompose, d2ca_dr2, complexity_scores, data_mean_prediction
 from dataclasses import dataclass
 import warnings
 from sklearn.metrics import roc_auc_score

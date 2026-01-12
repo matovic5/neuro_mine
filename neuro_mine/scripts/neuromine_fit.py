@@ -1,11 +1,11 @@
 import argparse
 from datetime import datetime
-from processing import process_paired_files
+from neuro_mine.lib.processing import process_paired_files
 import json
 import numpy as np
 import os
 from os import path
-import file_handling as fh
+import neuro_mine.lib.file_handling as fh
 
 class MineException(Exception):
     def __init__(self, message):

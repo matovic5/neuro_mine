@@ -7,7 +7,7 @@ from neuro_mine.ui.mine_form import Ui_Form
 import neuro_mine.ui.ui_utilities as uu
 import numpy as np
 import os
-from process_csv import default_options
+from neuro_mine.scripts.neuromine_fit import default_options
 import subprocess
 import sys
 
@@ -228,7 +228,7 @@ class Mine_App(QWidget, Ui_Form):
         miner_verbose = self.checkBox_4.isChecked()
         miner_train_fraction = self.lineEdit_10.text()
 
-        with importlib.resources.path("neuro_mine.scripts", "process_csv.py") as script_path:
+        with importlib.resources.path("neuro_mine.scripts", "neuromine_fit.py") as script_path:
             args = [sys.executable, str(script_path)]
 
             if model_name:
