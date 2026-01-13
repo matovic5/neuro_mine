@@ -3,7 +3,7 @@ import importlib.resources
 import json
 from PySide6.QtGui import QPalette, QColor, QIntValidator, QDoubleValidator
 from PySide6.QtWidgets import QApplication, QWidget, QFileDialog, QLineEdit, QCheckBox, QMessageBox
-from neuro_mine.ui.mine_form import Ui_Form
+from neuro_mine.ui.mine_fit import Ui_Form
 import neuro_mine.ui.ui_utilities as uu
 import numpy as np
 import os
@@ -37,7 +37,6 @@ class Mine_App(QWidget, Ui_Form):
         self.lineEdit_9.setValidator(QIntValidator(1, 100, self)) # limit epochs to integers
         self.lineEdit_9.setText(str(default_options["n_epochs"])) # Number of Epochs
         self.lineEdit_10.setText(str(default_options["miner_train_fraction"])) # Number of Epochs # Fraction of Data to use to Train
-        self.checkBox_4.setChecked(True) # Verbose Fitting Updates
 
         # connect signals
         self.pushButton.clicked.connect(self.on_run_clicked)
@@ -56,8 +55,8 @@ class Mine_App(QWidget, Ui_Form):
             (self.lineEdit_5, 0, 1),
             (self.lineEdit_6, 0, 1),
             (self.lineEdit_7, 0, 1),
-            (self.lineEdit_8, 1.0, np.inf),
-            (self.lineEdit_9, 1, 100),
+            (self.lineEdit_8, 0.00000001, np.inf),
+            (self.lineEdit_9, 1, 500),
             (self.lineEdit_10, 0, 1)
         ]:
             le.editingFinished.connect(
@@ -98,7 +97,6 @@ class Mine_App(QWidget, Ui_Form):
                 "taylor_look":self.lineEdit_4.text().strip(),
                 "jacobian":self.checkBox_3.isChecked(),
                 "n_epochs":self.lineEdit_9.text().strip(),
-                "miner_verbose":self.checkBox_4.isChecked(),
                 "miner_train_fraction":self.lineEdit_10.text().strip()
                 }
         }
@@ -152,7 +150,6 @@ class Mine_App(QWidget, Ui_Form):
         self.lineEdit_4.setText(str(data.get("taylor_look", default_options["taylor_look"])))
         self.checkBox_3.setChecked(data.get("jacobian", default_options["jacobian"]))
         self.lineEdit_9.setText(str(data.get("n_epochs", default_options["n_epochs"])))
-        self.checkBox_4.setChecked(data.get("miner_verbose", default_options["miner_verbose"]))
         self.lineEdit_10.setText(str(data.get("miner_train_fraction", default_options["miner_train_fraction"])))
 
     def update_button_states(self):
@@ -183,7 +180,6 @@ class Mine_App(QWidget, Ui_Form):
         self.lineEdit_8.setText(str(default_options["history"]))
         self.lineEdit_9.setText(str(default_options["n_epochs"]))
         self.lineEdit_10.setText(str(default_options["miner_train_fraction"]))
-        self.checkBox_4.setChecked(True)
 
         self.reset_validation_state()
 
@@ -225,7 +221,6 @@ class Mine_App(QWidget, Ui_Form):
         jacobian = self.checkBox_3.isChecked()
         config = self.lineEdit_11.text()
         n_epochs = self.lineEdit_9.text()
-        miner_verbose = self.checkBox_4.isChecked()
         miner_train_fraction = self.lineEdit_10.text()
 
         with importlib.resources.path("neuro_mine.scripts", "neuromine_fit.py") as script_path:
@@ -265,8 +260,6 @@ class Mine_App(QWidget, Ui_Form):
                 args.extend(["--config", config])
             if n_epochs:
                 args.extend(["--n_epochs", n_epochs])
-            if miner_verbose:
-                args.extend(["--miner_verbose"])
             if miner_train_fraction:
                 args.extend(["--miner_train_fraction", miner_train_fraction])
 

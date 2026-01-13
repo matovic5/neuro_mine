@@ -11,7 +11,7 @@ def main():
         if len(sys.argv) > 1:
             subprocess.run(["python", str(script_path)] + sys.argv[1:])
         else:
-            with importlib.resources.path("neuro_mine.ui", "app_gui.py") as script_path:
+            with importlib.resources.path("neuro_mine.ui", "fit_gui.py") as script_path:
                 subprocess.run(["python", str(script_path)])
 
 
