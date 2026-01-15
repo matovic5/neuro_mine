@@ -408,7 +408,10 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
                                      taylor_cutoff=taylor_cutoff,
                                      lax_thresh=lax_thresh,
                                      sqr_thresh=sqr_thresh)
-    interpret_df.to_csv(path.join(output_folder, interpret_name), index=False)
+    model_scores = mdata.roc_auc_test if is_spike_data else mdata.correlations_test
+    if not np.any(model_scores >= test_score_thresh):
+        # save insights here if no units were above threshold otherwise save after barcode clustering
+        interpret_df.to_csv(path.join(output_folder, interpret_name), index=False)
 
     # save Jacobians: One CSV file for each predictor, containing the Jacobians for each response
     # column headers will be the time delay relative to t=0, since our modeling is set up
@@ -417,7 +420,6 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
         ix_corr = ix - model_history + 1  # at model history is timepoint 0
         return (1/ip_rate) * ix_corr
 
-    model_scores = mdata.roc_auc_test if is_spike_data else mdata.correlations_test
     n_objects = model_scores.size
     if fit_jacobian and np.any(model_scores >= test_score_thresh):
         for i, pc in enumerate(predictor_columns):
@@ -477,8 +479,17 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
         fig.savefig(path.join(output_folder, f"MINE_{your_model}_LinearityMetrics.pdf"))
 
         # perform barcode clustering
-        fig = barcode_cluster_plot(interpret_df[interpret_df["Fit"] == "Y"], predictor_columns)[0]
+        fig, df_barcode = barcode_cluster_plot(interpret_df[interpret_df["Fit"] == "Y"], predictor_columns)
         fig.savefig(path.join(output_folder, f"MINE_{your_model}_BarcodeUpsetPlot.pdf"))
+
+        # augment insights with barcodes and save
+        barcode_cluster_numbers = np.full(interpret_df.shape[0], -1, dtype=int)
+        fit_ix = np.arange(interpret_df.shape[0]).astype(int)[interpret_df["Fit"] == "Y"]
+        for i, fix in enumerate(fit_ix):
+            barcode = np.array(df_barcode.iloc[i]).astype(int)
+            barcode_cluster_numbers[fix] = sum([bc*(2**j) for j, bc in enumerate(barcode)])
+        interpret_df.insert(interpret_df.shape[1], "Barcode cluster", barcode_cluster_numbers)
+        interpret_df.to_csv(path.join(output_folder, interpret_name), index=False)
 
 
 if __name__ == '__main__':
