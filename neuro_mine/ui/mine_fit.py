@@ -25,7 +25,7 @@ class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(598, 678)
+        Form.resize(596, 678)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -431,7 +431,7 @@ class Ui_Form(object):
 
         self.layoutWidget5 = QWidget(Form)
         self.layoutWidget5.setObjectName(u"layoutWidget5")
-        self.layoutWidget5.setGeometry(QRect(10, 540, 605, 33))
+        self.layoutWidget5.setGeometry(QRect(10, 540, 571, 33))
         self.horizontalLayout_11 = QHBoxLayout(self.layoutWidget5)
         self.horizontalLayout_11.setObjectName(u"horizontalLayout_11")
         self.horizontalLayout_11.setContentsMargins(0, 0, 0, 0)
