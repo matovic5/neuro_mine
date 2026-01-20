@@ -3,7 +3,7 @@ import importlib.resources
 import json
 from PySide6.QtGui import QPalette, QColor, QIntValidator, QDoubleValidator
 from PySide6.QtWidgets import QApplication, QWidget, QFileDialog, QLineEdit, QCheckBox, QMessageBox
-from neuro_mine.ui.mine_fit import Ui_Form
+from neuro_mine.ui.mine_train import Ui_Form
 import neuro_mine.ui.ui_utilities as uu
 import numpy as np
 import os

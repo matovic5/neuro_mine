@@ -44,9 +44,9 @@ pip install neuro_mine
 </details>
 
 <details>
-<summary><strong>Neuro-MINE for Fitting</strong></summary>
+<summary><strong>Neuro-MINE for Training</strong></summary>
 
-To launch GUI for model fitting:
+To launch GUI for model training:
 ```bash
 Mine-gui
 ```

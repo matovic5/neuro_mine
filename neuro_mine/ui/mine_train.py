@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'mine_fit.ui'
+## Form generated from reading UI file 'mine_train.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.10.1
 ##
@@ -19,13 +19,13 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QFormLayout, QGridLayout
     QGroupBox, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QSizePolicy, QTextEdit, QVBoxLayout,
     QWidget)
-import neuro_mine.ui.resources_rc
+import resources_rc
 
 class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(596, 678)
+        Form.resize(597, 678)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -431,59 +431,38 @@ class Ui_Form(object):
 
         self.layoutWidget5 = QWidget(Form)
         self.layoutWidget5.setObjectName(u"layoutWidget5")
-        self.layoutWidget5.setGeometry(QRect(10, 540, 571, 33))
-        self.horizontalLayout_11 = QHBoxLayout(self.layoutWidget5)
-        self.horizontalLayout_11.setObjectName(u"horizontalLayout_11")
-        self.horizontalLayout_11.setContentsMargins(0, 0, 0, 0)
-        self.pushButton_4 = QPushButton(self.layoutWidget5)
-        self.pushButton_4.setObjectName(u"pushButton_4")
-        sizePolicy.setHeightForWidth(self.pushButton_4.sizePolicy().hasHeightForWidth())
-        self.pushButton_4.setSizePolicy(sizePolicy)
-
-        self.horizontalLayout_11.addWidget(self.pushButton_4)
-
-        self.lineEdit_11 = QLineEdit(self.layoutWidget5)
-        self.lineEdit_11.setObjectName(u"lineEdit_11")
-        sizePolicy.setHeightForWidth(self.lineEdit_11.sizePolicy().hasHeightForWidth())
-        self.lineEdit_11.setSizePolicy(sizePolicy)
-        self.lineEdit_11.setMinimumSize(QSize(359, 0))
-
-        self.horizontalLayout_11.addWidget(self.lineEdit_11)
-
-        self.layoutWidget6 = QWidget(Form)
-        self.layoutWidget6.setObjectName(u"layoutWidget6")
-        self.layoutWidget6.setGeometry(QRect(10, 500, 268, 32))
-        self.horizontalLayout_16 = QHBoxLayout(self.layoutWidget6)
+        self.layoutWidget5.setGeometry(QRect(10, 500, 268, 32))
+        self.horizontalLayout_16 = QHBoxLayout(self.layoutWidget5)
         self.horizontalLayout_16.setObjectName(u"horizontalLayout_16")
         self.horizontalLayout_16.setContentsMargins(0, 0, 0, 0)
-        self.pushButton_5 = QPushButton(self.layoutWidget6)
+        self.pushButton_5 = QPushButton(self.layoutWidget5)
         self.pushButton_5.setObjectName(u"pushButton_5")
         sizePolicy.setHeightForWidth(self.pushButton_5.sizePolicy().hasHeightForWidth())
         self.pushButton_5.setSizePolicy(sizePolicy)
 
         self.horizontalLayout_16.addWidget(self.pushButton_5)
 
-        self.pushButton_6 = QPushButton(self.layoutWidget6)
+        self.pushButton_6 = QPushButton(self.layoutWidget5)
         self.pushButton_6.setObjectName(u"pushButton_6")
         sizePolicy.setHeightForWidth(self.pushButton_6.sizePolicy().hasHeightForWidth())
         self.pushButton_6.setSizePolicy(sizePolicy)
 
         self.horizontalLayout_16.addWidget(self.pushButton_6)
 
-        self.layoutWidget7 = QWidget(Form)
-        self.layoutWidget7.setObjectName(u"layoutWidget7")
-        self.layoutWidget7.setGeometry(QRect(10, 10, 571, 25))
-        self.horizontalLayout_15 = QHBoxLayout(self.layoutWidget7)
+        self.layoutWidget6 = QWidget(Form)
+        self.layoutWidget6.setObjectName(u"layoutWidget6")
+        self.layoutWidget6.setGeometry(QRect(10, 10, 571, 25))
+        self.horizontalLayout_15 = QHBoxLayout(self.layoutWidget6)
         self.horizontalLayout_15.setObjectName(u"horizontalLayout_15")
         self.horizontalLayout_15.setContentsMargins(0, 0, 0, 0)
-        self.label_2 = QLabel(self.layoutWidget7)
+        self.label_2 = QLabel(self.layoutWidget6)
         self.label_2.setObjectName(u"label_2")
         sizePolicy.setHeightForWidth(self.label_2.sizePolicy().hasHeightForWidth())
         self.label_2.setSizePolicy(sizePolicy)
 
         self.horizontalLayout_15.addWidget(self.label_2)
 
-        self.lineEdit = QLineEdit(self.layoutWidget7)
+        self.lineEdit = QLineEdit(self.layoutWidget6)
         self.lineEdit.setObjectName(u"lineEdit")
         sizePolicy.setHeightForWidth(self.lineEdit.sizePolicy().hasHeightForWidth())
         self.lineEdit.setSizePolicy(sizePolicy)
@@ -491,7 +470,7 @@ class Ui_Form(object):
 
         self.horizontalLayout_15.addWidget(self.lineEdit)
 
-        self.label = QLabel(self.layoutWidget7)
+        self.label = QLabel(self.layoutWidget6)
         self.label.setObjectName(u"label")
         sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
         self.label.setSizePolicy(sizePolicy)
@@ -499,6 +478,24 @@ class Ui_Form(object):
         self.label.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
 
         self.horizontalLayout_15.addWidget(self.label)
+
+        self.widget = QWidget(Form)
+        self.widget.setObjectName(u"widget")
+        self.widget.setGeometry(QRect(11, 540, 581, 33))
+        self.horizontalLayout_11 = QHBoxLayout(self.widget)
+        self.horizontalLayout_11.setObjectName(u"horizontalLayout_11")
+        self.horizontalLayout_11.setContentsMargins(0, 0, 0, 0)
+        self.pushButton_4 = QPushButton(self.widget)
+        self.pushButton_4.setObjectName(u"pushButton_4")
+        sizePolicy.setHeightForWidth(self.pushButton_4.sizePolicy().hasHeightForWidth())
+        self.pushButton_4.setSizePolicy(sizePolicy)
+
+        self.horizontalLayout_11.addWidget(self.pushButton_4)
+
+        self.lineEdit_11 = QLineEdit(self.widget)
+        self.lineEdit_11.setObjectName(u"lineEdit_11")
+
+        self.horizontalLayout_11.addWidget(self.lineEdit_11)
 
 
         self.retranslateUi(Form)
@@ -510,7 +507,7 @@ class Ui_Form(object):
     # setupUi
 
     def retranslateUi(self, Form):
-        Form.setWindowTitle(QCoreApplication.translate("Form", u"Neuro MINE Fit", None))
+        Form.setWindowTitle(QCoreApplication.translate("Form", u"Neuro MINE Train", None))
         self.pushButton.setText(QCoreApplication.translate("Form", u"Run Model", None))
         self.groupBox.setTitle(QCoreApplication.translate("Form", u"Data Input and Interpretation", None))
         self.pushButton_3.setText(QCoreApplication.translate("Form", u"Browse Response File(s)...", None))
@@ -559,10 +556,10 @@ class Ui_Form(object):
         self.groupBox_5.setTitle(QCoreApplication.translate("Form", u"Additional Outputs", None))
         self.label_14.setText(QCoreApplication.translate("Form", u"Store Linear Receptive Fields (Jacobians):", None))
         self.checkBox_3.setText(QCoreApplication.translate("Form", u"Yes", None))
-        self.pushButton_4.setText(QCoreApplication.translate("Form", u"Populate Parameters from JSON...", None))
         self.pushButton_5.setText(QCoreApplication.translate("Form", u"Restore Presets", None))
         self.pushButton_6.setText(QCoreApplication.translate("Form", u"Save Parameters", None))
         self.label_2.setText(QCoreApplication.translate("Form", u"Model Name:", None))
         self.label.setText("")
+        self.pushButton_4.setText(QCoreApplication.translate("Form", u"Populate Parameters from JSON...", None))
     # retranslateUi
 
