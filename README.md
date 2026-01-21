@@ -55,7 +55,7 @@ pip install -U neuro_mine
     <li>Predictor data **must** have time as the first column and it must be named 'time'; for optimal outputs, predictor columns should be meaningfully labelled (e.g., 'temperature' or 'left_paw') in the header</li>
     <li>Reponse data **must** have time as the first column and the responses must be in adjacent columns; column titles (a header) are supported but are not mandatory</li>
     <li>Within episodes, data must be continuous in time, and time must be monotonically increasing</li>
-    <li>Please note that ambiguities in the time column will lead to failures:
+    <li>⚠️Please note that ambiguities in the time column will lead to failures:
             <ul>
             <li>Be mindful of rounding when saving
                 data to CSV which can assign the same time values to successive timepoints.
@@ -86,7 +86,7 @@ Mine --help # see possible command line prompts to customize the model
 ```
 
 Neuro-MINE Train GUI Documentation:
-<img width="3700" height="1783" alt="GUI-train-README" src="https://github.com/user-attachments/assets/81b68dbf-d377-4321-8fdc-3dfcf9f87ffa" />
+<img width="3456" height="1665" alt="GUI-train-README" src="https://github.com/user-attachments/assets/2158c3b9-3bb1-4a9d-8911-2bcba4455125" />
 
 Neuro-MINE Parameter Documentation:
 <table>
@@ -179,7 +179,7 @@ Mine-predict --help # see possible command line prompts to parameterize the pred
 ```
 
 Neuro-MINE Predict Documentation: 
-<img width="1100" height="708" alt="GUI-predict-README" src="https://github.com/user-attachments/assets/b4efb2fa-171f-4e6e-a980-c2a40cec7451" />
+<img width="1694" height="1090" alt="GUI-predict-README" src="https://github.com/user-attachments/assets/6e5ddd5b-edb5-4ae2-aa40-af3c44a92ce4" />
 
 </details>
 
