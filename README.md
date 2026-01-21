@@ -1,9 +1,18 @@
 # Neuro-MINE (Model Identification of Neural Encoding) 🧠💻
 
 Welcome to Neuro-MINE: your handy companion for processing neuronal response data!
+
 This app allows users to use MINE as a GUI or in the command line to train a flexible,
 convolutional neural network (CNN) to analyze experimental datasets containing neural
 activity and corresponding predictors (e.g., behavioral responses).
+
+Neuro-MINE makes an updated version of MINE ([Costabile et al., 2023](https://elifesciences.org/articles/83289))
+available in an easy-to-use interface.
+This version of MINE now supports spiking data as well as episodic data.
+For episodic data, care is taken that model fits, Taylor decomposition, and prediction correctly
+handle episode boundaries.
+Furthermore, Neuro-MINE provides easily interpretable outputs in a model insights file that can be used as
+starting points for further analysis.
 
 # Installation
 The examples below use conda to manage environments but any environment manager or python installation will work.
