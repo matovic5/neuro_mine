@@ -25,6 +25,9 @@ dependencies = [
     "urllib3==1.26.6"
 ]
 
+[project.optional-dependencies]
+docs = ["sphinx"]
+
 [tool.setuptools]
 license-files = ["LICENSE"]
 
