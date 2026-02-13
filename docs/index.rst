@@ -84,6 +84,7 @@ Training GUI Explanation:
 .. image :: _static/GUI-train-README.png
 
 Training Parameter Explanation
+
 .. list-table:: Model Parameters
    :header-rows: 1
    :widths: 25 75
