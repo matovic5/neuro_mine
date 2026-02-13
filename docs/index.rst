@@ -80,8 +80,9 @@ See possible command line prompets to customize the model
 
     Mine --help
 
-Training GUI Explanation:
-.. image :: _static/GUI-train-README.png
+Training GUI Explanation
+
+.. image:: _static/GUI-train-README.png
 
 Training Parameter Explanation
 
@@ -160,6 +161,7 @@ See possible command line prompets to parametrize the prediction
     Mine-predict --help
 
 Prediction GUI Explanation
+
 .. image:: _static/GUI-predict-README.png
 
 ------------
