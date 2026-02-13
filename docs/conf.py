@@ -26,3 +26,10 @@ html_theme_options = {
     "use_edit_page_button": True,
     "navbar_end": ["theme-switcher", "navbar-icon-links"],
 }
+html_context = {
+    "github_user": "matovic5",
+    "github_repo": "neuro_mine",
+    "github_version": "main",
+    "doc_path": "docs",
+}
+
