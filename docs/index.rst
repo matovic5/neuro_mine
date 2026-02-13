@@ -81,42 +81,58 @@ See possible command line prompets to customize the model
     Mine --help
 
 Training GUI Explanation:
-.. image :: /img/GUI-train-README.png
+.. image :: _static/GUI-train-README.png
 
 Training Parameter Explanation
-+-------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Name                          | Explanation                                                                                                                                                                                                                                                                                                                                                                                      |
-+===============================+==================================================================================================================================================================================================================================================================================================================================================================================================+
-| Test Score Threshold [-ct]    | Sets the minimal correlation between model predictions and true outcomes needed on test data to consider a response “fit.” Changing this value will have the greatest influence on results because it will filter responses whose test correlation is below the set threshold.                                                                                                                      |
-|                               |                                                                                                                                                                                                                                                                                                                                                                                                  |
-|                               | Currently set to the square root of 0.5 (√0.5), which indicates that the prediction explains 50 % of the variance in the data. Empirically, this threshold yielded a >90-fold enrichment of true over false positives.                                                                                                                                                                      |
-+-------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Model History [-mh]           | Number of seconds of past data to be used for fitting (higher history increases runtime). This value should be set based on expectations around how far in the past events might influence current neural activity.                                                                                                                                |
-|                               |                                                                                                                                                                                                                                                                                                                                                                                                  |
-|                               | Note: Currently, inputs to the model are limited to past events, however, for motor outputs, anticipatory activity could be of interest which would require future inputs or a negative value for history. While this isn’t supported, a similar effect can be achieved by time-shifting the predictors relative to the responses, see Costabile et al., 2023.                                     |
-+-------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Number of Epochs [-e]         | Number of iterations with which the model will be fit over the entirety of the training data.                                                                                                                                                                                                                                                                                                  |
-|                               |                                                                                                                                                                                                                                                                                                                                                                                                  |
-|                               | Current default is 100 for an intermediate size data set; the larger the data set, the fewer epochs will be needed to find patterns in it, and vice versa.                                                                                                                                                                                                                                    |
-+-------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Train Data Fraction [-mtf]    | Fraction of data to be used for training (remaining value to 1.0 will be used for testing).                                                                                                                                                                                                                                                                                                    |
-|                               |                                                                                                                                                                                                                                                                                                                                                                                                  |
-|                               | *Note on generalization:* If the input data is periodic, test score correlations will still speak to the quality of fit, but to test whether the model generalizes, predictors in the test period should be different than predictors in the training period.                                                                                                                                |
-|                               |                                                                                                                                                                                                                                                                                                                                                                                                  |
-|                               | *Note on episodic data:* Train/test sets are split by episodes. In other words, if the experiment contains 10 episodes, then the first 8 will be used for training, the last 2 for testing at the default value.                                                                                                                                                                             |
-+-------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Cutoff [-tc]                  | Minimal fraction of variance explained that needs to be lost for a predictor to be considered driving a response. A value of 0.1 is a sensible default if neurons robustly respond to their inputs. If responses are expected to be stochastic, a value of 0 is more sensible.                                                                                                           |
-+-------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Significance Threshold [-ts]  | The loss in explained variance, after correcting for multiple comparisons, has to be significantly larger than “Cutoff” at this p-value for a predictor to be considered driving a response.                                                                                                                                                                                                  |
-+-------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Look Ahead [-tl]              | As a fraction of model history, the number of timepoints into the future that will be predicted by the Taylor expansion. Raising this value significantly will overall decrease the fidelity of the Taylor expansion prediction, leading to unstable assignments of predictors to responses. Lowering the value close to 0 improves the prediction, but again decreases stability, since predictions often become trivial. |
-+-------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Linear Fit Variance Fraction  | Threshold on the fraction of variance explained by a linear expansion of the model. If this threshold is crossed, the neural response is considered “linear.”                                                                                                                                                                                                                                 |
-| [-la]                         |                                                                                                                                                                                                                                                                                                                                                                                                  |
-+-------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| Square Fit Variance Fraction  | Threshold on the fraction of variance explained by a 2nd order expansion of the model. If this threshold is crossed, and the linear threshold is not, the neural response is considered 2nd order (reported as “square” in insights). If neither is crossed it will be reported as “cubic+” and is considered of higher order than 2.                                                        |
-| [-lsq]                        |                                                                                                                                                                                                                                                                                                                                                                                                  |
-+-------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+.. list-table:: Model Parameters
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Name
+     - Explanation
+
+   * - Test Score Threshold [-ct]
+     - Sets the minimal correlation between model predictions and true outcomes needed on test data to consider a response “fit.” Changing this value will have the greatest influence on results because it filters responses whose test correlation is below the threshold.
+
+       Currently set to the square root of 0.5 (√0.5), indicating that the prediction explains 50% of the variance in the data. Empirically, this threshold yielded a >90-fold enrichment of true over false positives.
+
+   * - Model History [-mh]
+     - Number of seconds of past data used for fitting (higher history increases runtime). Set this based on expectations about how far in the past events might influence current neural activity.
+
+       **Note:** Inputs are currently limited to past events. For motor outputs, anticipatory activity might require future inputs (negative history). While not supported, a similar effect can be achieved by time-shifting predictors relative to responses (Costabile et al., 2023).
+
+   * - Number of Epochs [-e]
+     - Number of iterations used to fit the model over the entire training dataset.
+
+       Default is 100 for an intermediate-size dataset. Larger datasets typically require fewer epochs to detect patterns, and smaller datasets may require more.
+
+   * - Train Data Fraction [-mtf]
+     - Fraction of data used for training (the remainder is used for testing).
+
+       *Note on generalization:* If the input data is periodic, test score correlations still indicate fit quality. However, to test generalization, predictors in the test period should differ from those in training.
+
+       *Note on episodic data:* Train/test sets are split by episodes. For example, if an experiment contains 10 episodes, the first 8 are used for training and the last 2 for testing at the default value.
+
+   * - Cutoff [-tc]
+     - Minimal fraction of variance explained that must be lost for a predictor to be considered driving a response.
+
+       A value of 0.1 is a sensible default when neurons respond robustly. If responses are expected to be stochastic, a value of 0 may be more appropriate.
+
+   * - Significance Threshold [-ts]
+     - After correcting for multiple comparisons, the loss in explained variance must be significantly larger than the **Cutoff** at this p-value for a predictor to be considered driving a response.
+
+   * - Look Ahead [-tl]
+     - Fraction of model history representing how many future timepoints are predicted by the Taylor expansion.
+
+       Increasing this value decreases prediction fidelity and can lead to unstable predictor assignments. Lowering it toward 0 improves prediction accuracy but may reduce stability because predictions become trivial.
+
+   * - Linear Fit Variance Fraction [-la]
+     - Threshold on the fraction of variance explained by a linear expansion of the model. If crossed, the neural response is classified as **linear**.
+
+   * - Square Fit Variance Fraction [-lsq]
+     - Threshold on the fraction of variance explained by a second-order expansion.
+
+       If crossed (and the linear threshold is not), the response is classified as **second order** (“square” in insights). If neither threshold is crossed, the response is reported as **cubic+**, indicating higher than second order.
 
 
 ------------
@@ -143,7 +159,7 @@ See possible command line prompets to parametrize the prediction
     Mine-predict --help
 
 Prediction GUI Explanation
-.. image:: /img/GUI-predict-README.png
+.. image:: _static/GUI-predict-README.png
 
 ------------
 
