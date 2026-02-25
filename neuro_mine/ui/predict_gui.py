@@ -16,7 +16,7 @@ class Predict_App(QWidget, Ui_Widget):
         self.pushButton.clicked.connect(lambda: uu.browse_file(self, self.lineEdit, "Weights File", "*.hdf5", self.last_dir))
         self.pushButton_2.clicked.connect(lambda: uu.browse_file(self, self.lineEdit_2, "Analysis File", "*.hdf5", self.last_dir))
         self.pushButton_3.clicked.connect(lambda: self.handle_json_browse(self.lineEdit_3))
-        self.pushButton_4.clicked.connect(lambda: uu.browse_multiple_files(self, self.textEdit, "Predictor File(s)", "*.csv", self.last_dir))
+        self.pushButton_4.clicked.connect(lambda: uu.browse_multiple_files(self, self.textEdit, "Predictor File(s)", "Data Files (*.csv *.tsv)", self.last_dir))
         self.pushButton_5.clicked.connect(self.on_run_clicked)
 
         self.lineEdit_6.setText("-1") # Test Score Threshold

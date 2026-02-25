@@ -40,8 +40,8 @@ class Mine_App(QWidget, Ui_Form):
 
         # connect signals
         self.pushButton.clicked.connect(self.on_run_clicked)
-        self.pushButton_2.clicked.connect(lambda: uu.browse_multiple_files(self, self.textEdit, "Predictor File(s)", "*.csv", self.last_dir))
-        self.pushButton_3.clicked.connect(lambda: uu.browse_multiple_files(self, self.textEdit_2, "Response File(s)", "*.csv", self.last_dir))
+        self.pushButton_2.clicked.connect(lambda: uu.browse_multiple_files(self, self.textEdit, "Predictor File(s)", "Data Files (*.csv *.tsv)", self.last_dir))
+        self.pushButton_3.clicked.connect(lambda: uu.browse_multiple_files(self, self.textEdit_2, "Response File(s)", "Data Files (*.csv *.tsv)", self.last_dir))
         self.pushButton_4.clicked.connect(lambda: self.handle_json_browse(self.lineEdit_11))
         self.pushButton_5.clicked.connect(self.restore_defaults)
         self.pushButton_6.clicked.connect(self.save_to_json)
