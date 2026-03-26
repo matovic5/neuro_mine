@@ -151,7 +151,11 @@ def generate_insights(mdata: Union[MineData, MineSpikingData], is_spike_data: bo
     n_objects = model_scores.size
     # for taylor analysis (which predictors are important) compute our significance levels based on a) user input
     # and b) the number of responses above threshold which gives the multiple-comparison correction - bonferroni
-    min_significance = 1 - taylor_sig / np.sum(model_scores >= test_score_thresh)
+    n_fit = np.sum(model_scores >= test_score_thresh)
+    if n_fit > 1:
+        min_significance = 1 - taylor_sig / n_fit
+    else:
+        min_significance = 1 - taylor_sig
     normal_quantiles_by_sigma = np.array([0.682689492137, 0.954499736104, 0.997300203937, 0.999936657516,
                                           0.999999426697, 0.999999998027])
     n_sigma = np.where((min_significance - normal_quantiles_by_sigma) < 0)[0][0] + 1
