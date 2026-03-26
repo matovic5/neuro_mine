@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>597</width>
-    <height>678</height>
+    <height>669</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -27,8 +27,8 @@
   <widget class="QPushButton" name="pushButton">
    <property name="geometry">
     <rect>
-     <x>440</x>
-     <y>640</y>
+     <x>450</x>
+     <y>630</y>
      <width>141</width>
      <height>32</height>
     </rect>
@@ -420,7 +420,7 @@
      <x>310</x>
      <y>330</y>
      <width>281</width>
-     <height>181</height>
+     <height>151</height>
     </rect>
    </property>
    <property name="title">
@@ -432,7 +432,7 @@
       <x>0</x>
       <y>20</y>
       <width>273</width>
-      <height>157</height>
+      <height>121</height>
      </rect>
     </property>
     <layout class="QVBoxLayout" name="verticalLayout">
@@ -511,46 +511,6 @@
         <widget class="QLabel" name="label_4">
          <property name="text">
           <string>[0,1]</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_3">
-       <item>
-        <widget class="QLabel" name="label_10">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="text">
-          <string>Look Ahead:</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="lineEdit_4">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="minimumSize">
-          <size>
-           <width>50</width>
-           <height>0</height>
-          </size>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="label_22">
-         <property name="text">
-          <string>(0,4)</string>
          </property>
         </widget>
        </item>
@@ -643,7 +603,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>580</y>
+     <y>570</y>
      <width>131</width>
      <height>41</height>
     </rect>
@@ -694,7 +654,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>630</y>
+     <y>620</y>
      <width>301</width>
      <height>41</height>
     </rect>
@@ -745,7 +705,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>500</y>
+     <y>490</y>
      <width>268</width>
      <height>32</height>
     </rect>
@@ -839,11 +799,11 @@
     </item>
    </layout>
   </widget>
-  <widget class="QWidget" name="">
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
-     <x>11</x>
-     <y>540</y>
+     <x>10</x>
+     <y>530</y>
      <width>581</width>
      <height>33</height>
     </rect>

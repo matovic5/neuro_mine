@@ -28,7 +28,6 @@ class Mine_App(QWidget, Ui_Form):
         self.lineEdit_2.setValidator(validator) # validate that test score threshold is only 2 decimal places
         self.lineEdit_2.setText(f"{float(default_options['th_test']):.2f}") # Test Score Threshold
         self.lineEdit_3.setText(str(default_options["taylor_sig"])) # Taylor Expansion Significance Threshold
-        self.lineEdit_4.setText(str(default_options["taylor_look"]))  # Taylor Look Ahead
         self.lineEdit_5.setText(str(default_options["taylor_cut"])) # Taylor Cutoff
         self.lineEdit_6.setText(str(default_options["th_lax"]))  # Linear Fit Variance explained cutoff
         self.lineEdit_7.setText(str(default_options["th_sqr"])) # Square Fit Variance explained cutoff
@@ -51,7 +50,6 @@ class Mine_App(QWidget, Ui_Form):
         for le, minv, maxv in [
             (self.lineEdit_2, 0, 1),
             (self.lineEdit_3, 0, 1),
-            (self.lineEdit_4, 0.00000001, 3.999999999),
             (self.lineEdit_5, 0, 1),
             (self.lineEdit_6, 0, 1),
             (self.lineEdit_7, 0, 1),
@@ -94,7 +92,6 @@ class Mine_App(QWidget, Ui_Form):
                 "th_lax":self.lineEdit_6.text().strip(),
                 "th_sqr":self.lineEdit_7.text().strip(),
                 "history":self.lineEdit_8.text().strip(),
-                "taylor_look":self.lineEdit_4.text().strip(),
                 "jacobian":self.checkBox_3.isChecked(),
                 "n_epochs":self.lineEdit_9.text().strip(),
                 "miner_train_fraction":self.lineEdit_10.text().strip()
@@ -147,7 +144,6 @@ class Mine_App(QWidget, Ui_Form):
         self.lineEdit_6.setText(str(data.get("th_lax", default_options["th_lax"])))
         self.lineEdit_7.setText(str(data.get("th_sqr", default_options["th_sqr"])))
         self.lineEdit_8.setText(str(data.get("history", default_options["history"])))
-        self.lineEdit_4.setText(str(data.get("taylor_look", default_options["taylor_look"])))
         self.checkBox_3.setChecked(data.get("jacobian", default_options["jacobian"]))
         self.lineEdit_9.setText(str(data.get("n_epochs", default_options["n_epochs"])))
         self.lineEdit_10.setText(str(data.get("miner_train_fraction", default_options["miner_train_fraction"])))
@@ -172,7 +168,6 @@ class Mine_App(QWidget, Ui_Form):
         self.checkBox_5.setChecked(default_options["run_shuffle"])
         self.lineEdit_2.setText(str(default_options["th_test"]))
         self.lineEdit_3.setText(str(default_options["taylor_sig"]))
-        self.lineEdit_4.setText(str(default_options["taylor_look"]))
         self.lineEdit_5.setText(str(default_options["taylor_cut"]))
         self.lineEdit_6.setText(str(default_options["th_lax"]))
         self.lineEdit_7.setText(str(default_options["th_sqr"]))
@@ -185,7 +180,7 @@ class Mine_App(QWidget, Ui_Form):
 
     def reset_validation_state(self):
         """Resets line edit colors and re-enables buttons after restoring defaults."""
-        for widget in [self.lineEdit_2, self.lineEdit_3, self.lineEdit_4,
+        for widget in [self.lineEdit_2, self.lineEdit_3,
                        self.lineEdit_5, self.lineEdit_6, self.lineEdit_7,
                        self.lineEdit_8, self.lineEdit_9, self.lineEdit_10]:
             widget.setPalette(self.style().standardPalette())
@@ -193,7 +188,6 @@ class Mine_App(QWidget, Ui_Form):
         for le, minv, maxv in [
             (self.lineEdit_2, 0, 1),
             (self.lineEdit_3, 0, 1),
-            (self.lineEdit_4, 0.00000001, 3.999999999),
             (self.lineEdit_5, 0, 1),
             (self.lineEdit_6, 0, 1),
             (self.lineEdit_7, 0, 1),
@@ -217,7 +211,6 @@ class Mine_App(QWidget, Ui_Form):
         th_lax = self.lineEdit_6.text()
         th_sqr = self.lineEdit_7.text()
         history = self.lineEdit_8.text()
-        taylor_look = self.lineEdit_4.text()
         jacobian = self.checkBox_3.isChecked()
         config = self.lineEdit_11.text()
         n_epochs = self.lineEdit_9.text()
@@ -252,8 +245,6 @@ class Mine_App(QWidget, Ui_Form):
                 args.extend(["--th_sqr", th_sqr])
             if history:
                 args.extend(["--history", history])
-            if taylor_look:
-                args.extend(["--taylor_look", taylor_look])
             if jacobian:
                 args.extend(["--jacobian"])
             if config:
