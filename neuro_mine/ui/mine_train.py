@@ -19,13 +19,13 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QFormLayout, QGridLayout
     QGroupBox, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QSizePolicy, QTextEdit, QVBoxLayout,
     QWidget)
-import resources_rc
+import neuro_mine.ui.resources_rc
 
 class Ui_Form(object):
     def setupUi(self, Form):
         if not Form.objectName():
             Form.setObjectName(u"Form")
-        Form.resize(597, 678)
+        Form.resize(597, 669)
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -36,7 +36,7 @@ class Ui_Form(object):
         Form.setFont(font)
         self.pushButton = QPushButton(Form)
         self.pushButton.setObjectName(u"pushButton")
-        self.pushButton.setGeometry(QRect(440, 640, 141, 32))
+        self.pushButton.setGeometry(QRect(450, 630, 141, 32))
         sizePolicy.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
         self.pushButton.setSizePolicy(sizePolicy)
         self.groupBox = QGroupBox(Form)
@@ -251,10 +251,10 @@ class Ui_Form(object):
 
         self.groupBox_3 = QGroupBox(Form)
         self.groupBox_3.setObjectName(u"groupBox_3")
-        self.groupBox_3.setGeometry(QRect(310, 330, 281, 181))
+        self.groupBox_3.setGeometry(QRect(310, 330, 281, 151))
         self.layoutWidget2 = QWidget(self.groupBox_3)
         self.layoutWidget2.setObjectName(u"layoutWidget2")
-        self.layoutWidget2.setGeometry(QRect(0, 20, 273, 157))
+        self.layoutWidget2.setGeometry(QRect(0, 20, 273, 121))
         self.verticalLayout = QVBoxLayout(self.layoutWidget2)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
@@ -308,31 +308,6 @@ class Ui_Form(object):
 
         self.verticalLayout.addLayout(self.horizontalLayout_2)
 
-        self.horizontalLayout_3 = QHBoxLayout()
-        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
-        self.label_10 = QLabel(self.layoutWidget2)
-        self.label_10.setObjectName(u"label_10")
-        sizePolicy.setHeightForWidth(self.label_10.sizePolicy().hasHeightForWidth())
-        self.label_10.setSizePolicy(sizePolicy)
-
-        self.horizontalLayout_3.addWidget(self.label_10)
-
-        self.lineEdit_4 = QLineEdit(self.layoutWidget2)
-        self.lineEdit_4.setObjectName(u"lineEdit_4")
-        sizePolicy.setHeightForWidth(self.lineEdit_4.sizePolicy().hasHeightForWidth())
-        self.lineEdit_4.setSizePolicy(sizePolicy)
-        self.lineEdit_4.setMinimumSize(QSize(50, 0))
-
-        self.horizontalLayout_3.addWidget(self.lineEdit_4)
-
-        self.label_22 = QLabel(self.layoutWidget2)
-        self.label_22.setObjectName(u"label_22")
-
-        self.horizontalLayout_3.addWidget(self.label_22)
-
-
-        self.verticalLayout.addLayout(self.horizontalLayout_3)
-
         self.horizontalLayout_4 = QHBoxLayout()
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
         self.label_12 = QLabel(self.layoutWidget2)
@@ -385,7 +360,7 @@ class Ui_Form(object):
 
         self.groupBox_4 = QGroupBox(Form)
         self.groupBox_4.setObjectName(u"groupBox_4")
-        self.groupBox_4.setGeometry(QRect(10, 580, 131, 41))
+        self.groupBox_4.setGeometry(QRect(10, 570, 131, 41))
         self.layoutWidget3 = QWidget(self.groupBox_4)
         self.layoutWidget3.setObjectName(u"layoutWidget3")
         self.layoutWidget3.setGeometry(QRect(0, 20, 129, 23))
@@ -408,7 +383,7 @@ class Ui_Form(object):
 
         self.groupBox_5 = QGroupBox(Form)
         self.groupBox_5.setObjectName(u"groupBox_5")
-        self.groupBox_5.setGeometry(QRect(10, 630, 301, 41))
+        self.groupBox_5.setGeometry(QRect(10, 620, 301, 41))
         self.layoutWidget4 = QWidget(self.groupBox_5)
         self.layoutWidget4.setObjectName(u"layoutWidget4")
         self.layoutWidget4.setGeometry(QRect(0, 20, 307, 23))
@@ -431,7 +406,7 @@ class Ui_Form(object):
 
         self.layoutWidget5 = QWidget(Form)
         self.layoutWidget5.setObjectName(u"layoutWidget5")
-        self.layoutWidget5.setGeometry(QRect(10, 500, 268, 32))
+        self.layoutWidget5.setGeometry(QRect(10, 490, 268, 32))
         self.horizontalLayout_16 = QHBoxLayout(self.layoutWidget5)
         self.horizontalLayout_16.setObjectName(u"horizontalLayout_16")
         self.horizontalLayout_16.setContentsMargins(0, 0, 0, 0)
@@ -479,20 +454,20 @@ class Ui_Form(object):
 
         self.horizontalLayout_15.addWidget(self.label)
 
-        self.widget = QWidget(Form)
-        self.widget.setObjectName(u"widget")
-        self.widget.setGeometry(QRect(11, 540, 581, 33))
-        self.horizontalLayout_11 = QHBoxLayout(self.widget)
+        self.layoutWidget7 = QWidget(Form)
+        self.layoutWidget7.setObjectName(u"layoutWidget7")
+        self.layoutWidget7.setGeometry(QRect(10, 530, 581, 33))
+        self.horizontalLayout_11 = QHBoxLayout(self.layoutWidget7)
         self.horizontalLayout_11.setObjectName(u"horizontalLayout_11")
         self.horizontalLayout_11.setContentsMargins(0, 0, 0, 0)
-        self.pushButton_4 = QPushButton(self.widget)
+        self.pushButton_4 = QPushButton(self.layoutWidget7)
         self.pushButton_4.setObjectName(u"pushButton_4")
         sizePolicy.setHeightForWidth(self.pushButton_4.sizePolicy().hasHeightForWidth())
         self.pushButton_4.setSizePolicy(sizePolicy)
 
         self.horizontalLayout_11.addWidget(self.pushButton_4)
 
-        self.lineEdit_11 = QLineEdit(self.widget)
+        self.lineEdit_11 = QLineEdit(self.layoutWidget7)
         self.lineEdit_11.setObjectName(u"lineEdit_11")
 
         self.horizontalLayout_11.addWidget(self.lineEdit_11)
@@ -544,8 +519,6 @@ class Ui_Form(object):
         self.label_23.setText(QCoreApplication.translate("Form", u"[0,1]", None))
         self.label_9.setText(QCoreApplication.translate("Form", u"Significance Threshold:", None))
         self.label_4.setText(QCoreApplication.translate("Form", u"[0,1]", None))
-        self.label_10.setText(QCoreApplication.translate("Form", u"Look Ahead:", None))
-        self.label_22.setText(QCoreApplication.translate("Form", u"(0,4)", None))
         self.label_12.setText(QCoreApplication.translate("Form", u"Linear Fit Variance Fraction:", None))
         self.label_24.setText(QCoreApplication.translate("Form", u"[0,1]", None))
         self.label_13.setText(QCoreApplication.translate("Form", u"Square Fit Variance Fraction:", None))
