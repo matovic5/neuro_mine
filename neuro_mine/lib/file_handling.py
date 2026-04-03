@@ -188,7 +188,13 @@ class CSVParser(FileParser):
             # The name of the first column is Time
             data_header = ["Time"]+[f"{self.prefix}_{i}" for i in range(ncols-1)]
 
-        # remove rows that contain NaN values
+        # remove columns that contain all NaN - these can occur when cell contents in CSV files
+        # are deleted without deleting the column itself
+        full_nan = np.sum(np.isnan(data), axis=0) == data.shape[0]
+        data_header = [dh for i, dh in enumerate(data_header) if not full_nan[i]]
+        data = data[:, np.logical_not(full_nan)]
+
+        # remove rows that contain at leat one NaN value
         has_nan = np.sum(np.isnan(data), axis=1) > 0
         data = data[np.logical_not(has_nan)]
 
