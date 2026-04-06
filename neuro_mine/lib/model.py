@@ -264,6 +264,6 @@ def get_standard_model(hist_steps: int, predict_spikes: bool) -> ActivityPredict
     """
     m = ActivityPredictor(64, 80, 0.5, hist_steps, "swish", predict_spikes)
     m.learning_rate = 1e-3
-    m.l2_sparsity = 1e-5
+    m.l2_sparsity = 1e-3
     m.setup()
     return m
