@@ -77,7 +77,8 @@ def episodic_interpolation(predictor_data: List[np.ndarray], response_data: List
                 [np.interp(ip_time, resp_times[i][valid_resp[i]], rd[valid_resp[i]])[:, None] for rd in response_data[i].T])
         else:
             ip_resp_data = np.hstack(
-                [interp_events(ip_time, resp_times[i][valid_resp[i]], rd[valid_resp[i]])[:, None] for rd in response_data[i].T])
+                [interp_events(ip_time, resp_times[i][valid_resp[i]], rd[valid_resp[i]])[:, None] for rd in response_data[i].T[1:, :]])
+            ip_resp_data = np.c_[ip_time[:, None], ip_resp_data]
         ip_preds.append(ip_pred_data)
         ip_resps.append(ip_resp_data)
         ip_times.append(ip_time)
@@ -110,7 +111,8 @@ def joint_interpolation(predictor_data: np.ndarray, response_data: np.ndarray, p
             [np.interp(ip_time, resp_times[valid_resp], rd[valid_resp])[:, None] for rd in response_data.T])
     else:
         ip_resp_data = np.hstack(
-            [interp_events(ip_time, resp_times[valid_resp], rd[valid_resp])[:, None] for rd in response_data.T])
+            [interp_events(ip_time, resp_times[valid_resp], rd[valid_resp])[:, None] for rd in response_data.T[1:, :]])
+        ip_resp_data = np.c_[ip_time[:, None], ip_resp_data]
     return ip_pred_data, ip_resp_data, ip_time
 
 
@@ -253,7 +255,7 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
     # a response file either contains all continuous data or all spiking data. When in doubt, we will treat as
     # continuous - the same is true for determination across episodes
     if not is_episodic:
-        if np.all(np.logical_or(resp_data==0, resp_data==1)):
+        if np.all(np.logical_or(resp_data[:, 1:]==0, resp_data[:, 1:]==1)):
             is_spike_data = True
             print("Responses are assumed to contain spikes")
         else:
