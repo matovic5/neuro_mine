@@ -13,6 +13,52 @@ import matplotlib.pyplot as pl
 from warnings import filterwarnings
 
 
+def downsample_data(in_data: np.ndarray, in_time: np.ndarray,
+                    factor: int, is_spike_data: bool) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Downsamples data by a given factor. Overhangs will be removed
+    :param in_data: The data to downsample
+    :param in_time: The time of each datapoint before downsampling
+    :param factor: The downsampling factor
+    :param is_spike_data: If true, data is assumed to be discrete 0/1 spiking data
+    :return:
+        [0]: The downsampled data
+        [1]: The downsampled time
+    """
+    assert in_data.ndim == 1
+    assert in_time.size == in_data.size
+    if factor <= 1:
+        return in_data, in_time
+    # determine the function used for downsampling - in case of continuous data we can take the mean
+    # in case of spiking data we have to use max, i.e., if there is at least one spike in the down-sampled
+    # bin we call a spike. This does mean that downsampling isn't that ideal for spiking data
+    ds_fun = np.max if is_spike_data else np.mean
+    # remove overhang
+    valid_size = (in_data.size // factor) * factor
+    out_time = in_time[:valid_size][::factor]
+    out_data = ds_fun(in_data[:valid_size].reshape((in_data.size//factor, factor)), axis=1)
+    return out_data, out_time
+
+
+def downsample_mat_with_time(in_data: np.ndarray, factor: int, is_spike_data: bool) -> np.ndarray:
+    assert in_data.ndim == 2
+    in_time = in_data[:, 0]
+    out_data = []
+    out_time = None
+    for i in range(1, in_data.shape[1]):
+        od, out_time = downsample_data(in_data[:, i], in_time, factor, is_spike_data)
+        out_data.append(od[:, None])
+    out_data = np.hstack(out_data)
+    return np.c_[out_time[:, None], out_data]
+
+
+def downsample_mat_list(in_list: List[np.ndarray], factor: int, is_spike_data: bool) -> List[np.ndarray]:
+    out_list = []
+    for item in in_list:
+        out_list.append(downsample_mat_with_time(item, factor, is_spike_data))
+    return out_list
+
+
 def ip_time_proposal(pred_times: np.ndarray, resp_times: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     For one set (e.g., episode) of predictor and response data, proposes interpolation times
@@ -218,6 +264,7 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
     lax_thresh = configuration["config"]["th_lax"]
     sqr_thresh = configuration["config"]["th_sqr"]
     taylor_cutoff = configuration["config"]["taylor_cut"]
+    downsampling = configuration["config"]["downsampling"]
 
     if len(resp_path) != len(pred_path):
         raise ValueError("Episodic data needs to have the same number of predictor and response files")
@@ -271,13 +318,22 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
         else:
             print("Responses are assumed to be continuous values not spikes")
 
+    # interpolate and if requested downsample data
     if not is_episodic:
         ip_pred_data, ip_resp_data, ip_time = joint_interpolation(pred_data, resp_data, pred_data[:, 0],
                                                                   resp_data[:, 0], is_spike_data)
+        if downsampling > 1:
+            ip_pred_data = downsample_mat_with_time(ip_pred_data, downsampling, is_spike_data)
+            ip_resp_data = downsample_mat_with_time(ip_resp_data, downsampling, is_spike_data)
+            ip_time = ip_pred_data[:, 0]
     else:
         ip_pred_data, ip_resp_data, ip_time = episodic_interpolation(pred_data_list, resp_data_list,
                                                                      [pda[:, 0] for pda in pred_data_list],
                                                                      [rda[:, 0] for rda in resp_data_list], is_spike_data)
+        if downsampling > 1:
+            ip_pred_data = downsample_mat_list(ip_pred_data, downsampling, is_spike_data)
+            ip_resp_data = downsample_mat_list(ip_resp_data, downsampling, is_spike_data)
+            ip_time = [ipd[:, 0] for ipd in ip_pred_data]
 
     # Save interpolated data with chosen column names if verbose flag is set - currently not for episodic data
     if miner_verbose and not is_episodic:

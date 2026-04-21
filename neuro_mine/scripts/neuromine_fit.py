@@ -31,7 +31,8 @@ default_options = {
     "n_epochs": 100,
     "miner_verbose": True,
     "miner_train_fraction": 0.8,
-    "episodic": False
+    "episodic": False,
+    "downsampling": 1,
 }
 
 
@@ -86,6 +87,8 @@ if __name__ == '__main__':
     a_parser.add_argument("-eps", "--episodic", help="If set data is assumed to be episodic with one "
                                                      "predictor and one response file per episode.",
                           action="store_true")
+    a_parser.add_argument("-dsf", "--downsampling", help="The downsampling factor",
+                          type=float, default=default_options['downsampling'])
 
     args = a_parser.parse_args()
 
@@ -125,6 +128,7 @@ if __name__ == '__main__':
     fit_jacobian = config_dict["jacobian"] if args.jacobian == default_options["jacobian"] else args.jacobian
     fit_epochs = config_dict["n_epochs"] if args.n_epochs == default_options["n_epochs"] else args.n_epochs
     miner_train_fraction = config_dict["miner_train_fraction"] if args.miner_train_fraction == default_options["miner_train_fraction"] else args.miner_train_fraction
+    downsampling = config_dict["downsampling"] if args.downsampling == default_options["downsampling"] else args.downsampling
     miner_verbose = False if args.miner_quiet else True
 
     if args.model_name is None:
@@ -151,7 +155,8 @@ if __name__ == '__main__':
                         "jacobian": fit_jacobian,
                         "n_epochs": fit_epochs,
                         "miner_verbose": miner_verbose,
-                        "miner_train_fraction": miner_train_fraction
+                        "miner_train_fraction": miner_train_fraction,
+                        "downsampling": downsampling,
                     },
                 "run":
                     {
@@ -185,7 +190,8 @@ if __name__ == '__main__':
                     "jacobian": fit_jacobian,
                     "n_epochs": fit_epochs,
                     "miner_verbose": miner_verbose,
-                    "miner_train_fraction": miner_train_fraction
+                    "miner_train_fraction": miner_train_fraction,
+                    "downsampling": downsampling,
                 },
             "run":
                 {
