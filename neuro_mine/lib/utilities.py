@@ -416,8 +416,8 @@ class Data:
         :param batch_size: The training batch size to use
         :return: Tensorflow dataset that can be used for training with randomization
         """
-        out_data = self.ca_responses[sample_ix, self.input_steps-1:self.tsteps_for_train].copy()
-        in_data = np.full((out_data.size, self.input_steps, len(self.regressors)), np.nan).astype(np.float32)
+        out_data = self.ca_responses[sample_ix, self.input_steps-1:self.tsteps_for_train].astype(np.float32).copy()
+        in_data = np.full((out_data.size, self.input_steps, len(self.regressors)), np.nan, dtype=np.float32)
         for i, reg in enumerate(self.regressors):
             if reg.shape[0] == 1:
                 this_reg = reg
