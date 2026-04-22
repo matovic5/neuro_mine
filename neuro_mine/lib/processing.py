@@ -403,6 +403,29 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
     if taylor_look_ahead < 1:
         taylor_look_ahead = 1
 
+    # compute expected training data size and warn user if crossing a threshold
+    td_gb_thresh = 32  # 32 GB warning threshold
+    td_byte_thresh = td_gb_thresh * 1024**3
+    td_length = sum([pd.shape[0] for pd in ip_pred_data]) if is_episodic else ip_pred_data.shape[0]
+    n_predictors = ip_pred_data[0].shape[1] if is_episodic else ip_pred_data.shape[1]
+    td_size = td_length * model_history * n_predictors * 2
+    if td_size > td_byte_thresh:
+        downsample_to_thresh = int(td_size // td_byte_thresh + 2)
+        downsample_proposal = 1
+        for i in range(2, downsample_to_thresh):
+            downsample_proposal += 1
+            m_hist = model_history // i
+            if m_hist < 1:
+                m_hist = 1
+            if (td_length//downsample_proposal) * m_hist * n_predictors * 2 < td_byte_thresh:
+                break
+        print("############################")
+        print(f"Expected training data size is larger {td_size // (1024**3)} GB.")
+        print("Depending on the system this might lead to out-of-memory errors.")
+        print("Reducing history length or downsampling data will reduce training data size.")
+        print(f"Setting the downsampling factor to {downsample_proposal} will reduce datasize below {td_gb_thresh} GB.")
+        print("############################")
+
     ###
     # Fit model
     ###
