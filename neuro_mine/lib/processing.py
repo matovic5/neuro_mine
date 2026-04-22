@@ -402,19 +402,19 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
     taylor_look_ahead = int(np.round(model_history * taylor_look_fraction, 0))
     if taylor_look_ahead < 1:
         taylor_look_ahead = 1
-    print(f"Model history is {model_history} frames")
-    print(f"Taylor look ahead is {taylor_look_ahead} frames")
 
     ###
     # Fit model
     ###
     mdata_shuff = None
+    # Set taylor_pred_every based on history length
+    taylor_pred_every = model_history
 
     weight_file_name = f"MINE_{your_model}_weights.hdf5"
     with h5py.File(path.join(output_folder, weight_file_name), "w") as weight_file:
         w_grp = weight_file.create_group("fit")
         miner = Mine(miner_train_fraction, model_history, test_score_thresh, True, fit_jacobian,
-                     taylor_look_ahead, 5, fit_spikes=is_spike_data)
+                     taylor_look_ahead, taylor_pred_every, fit_spikes=is_spike_data)
         miner.n_epochs = fit_epochs
         miner.verbose = miner_verbose
         miner.model_weight_store = w_grp
@@ -436,7 +436,7 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
         with h5py.File(path.join(output_folder, weight_file_name), "a") as weight_file:
             w_grp = weight_file.create_group("fit_shuffled")
             miner = Mine(miner_train_fraction, model_history, test_score_thresh, False, False,
-                         taylor_look_ahead, 5, fit_spikes=is_spike_data)
+                         taylor_look_ahead, taylor_pred_every, fit_spikes=is_spike_data)
             miner.n_epochs = fit_epochs
             miner.verbose = miner_verbose
             miner.model_weight_store = w_grp
