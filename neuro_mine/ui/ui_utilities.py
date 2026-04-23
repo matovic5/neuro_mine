@@ -64,5 +64,11 @@ def validate_range(line_edit, min_val, max_val, valid_fields, parent):
     if hasattr(parent, "update_button_states"):
         parent.update_button_states()
 
+def handle_checkbox_4(checked, line_edit):
+    line_edit.setEnabled(checked)
+
+    if not checked:
+        line_edit.setText("1")
+
 if __name__ == "__main__":
     print("Module with common UI functions for main app and predict app")

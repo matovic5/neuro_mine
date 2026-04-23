@@ -27,11 +27,20 @@ class Mine_App(QWidget, Ui_Form):
         self.checkBox_5.setChecked(default_options["run_shuffle"]) # Shuffle Data
         self.lineEdit_2.setValidator(validator) # validate that test score threshold is only 2 decimal places
         self.lineEdit_2.setText(f"{float(default_options['th_test']):.2f}") # Test Score Threshold
+        self.lineEdit_2.textChanged.connect(lambda: uu.validate_range(
+            self.lineEdit_2, 0, 1, self.valid_fields, self
+        ))
         self.lineEdit_3.setText(str(default_options["taylor_sig"])) # Taylor Expansion Significance Threshold
         self.lineEdit_4.setValidator(QIntValidator(1,2147483647,self))
         self.lineEdit_4.setText(str(default_options["downsampling"]))
-        self.checkBox_4.toggled.connect(self.lineEdit_4.setEnabled)
+        self.checkBox_4.toggled.connect(
+            lambda checked: uu.handle_checkbox_4(checked, self.lineEdit_4)
+        )
+        uu.handle_checkbox_4(self.checkBox_4.isChecked(), self.lineEdit_4)
         self.lineEdit_4.setEnabled(self.checkBox_4.isChecked())
+        self.lineEdit_4.textChanged.connect(lambda: uu.validate_range(
+            self.lineEdit_4, 1, 2147483647, self.valid_fields, self
+        ))
         self.lineEdit_5.setText(str(default_options["taylor_cut"])) # Taylor Cutoff
         self.lineEdit_6.setText(str(default_options["th_lax"]))  # Linear Fit Variance explained cutoff
         self.lineEdit_7.setText(str(default_options["th_sqr"])) # Square Fit Variance explained cutoff
@@ -39,6 +48,9 @@ class Mine_App(QWidget, Ui_Form):
         self.lineEdit_8.setText(str(default_options["history"])) # Model History [s]
         self.lineEdit_9.setValidator(QIntValidator(1, 500, self)) # limit epochs to integers
         self.lineEdit_9.setText(str(default_options["n_epochs"])) # Number of Epochs
+        self.lineEdit_9.textChanged.connect(lambda: uu.validate_range(
+            self.lineEdit_9, 0, 500, self.valid_fields, self
+        ))
         self.lineEdit_10.setText(str(default_options["miner_train_fraction"])) # Number of Epochs # Fraction of Data to use to Train
 
         # connect signals
@@ -54,7 +66,7 @@ class Mine_App(QWidget, Ui_Form):
         for le, minv, maxv in [
             (self.lineEdit_2, 0, 1),
             (self.lineEdit_3, 0, 1),
-            (self.lineEdit_4, 0, 2147483647),
+            (self.lineEdit_4, 1, 2147483647),
             (self.lineEdit_5, 0, 1),
             (self.lineEdit_6, 0, 1),
             (self.lineEdit_7, 0, 1),
@@ -99,7 +111,8 @@ class Mine_App(QWidget, Ui_Form):
                 "history":self.lineEdit_8.text().strip(),
                 "jacobian":self.checkBox_3.isChecked(),
                 "n_epochs":self.lineEdit_9.text().strip(),
-                "miner_train_fraction":self.lineEdit_10.text().strip()
+                "miner_train_fraction":self.lineEdit_10.text().strip(),
+                "downsampling":self.lineEdit_4.text().strip()
                 }
         }
 
@@ -172,11 +185,13 @@ class Mine_App(QWidget, Ui_Form):
         """Restore UI elements to their default preset values."""
         global default_options
 
+        self.checkBox_4.setChecked(False)
         self.checkBox_7.setChecked(default_options["episodic"])
         self.checkBox_6.setChecked(default_options["use_time"])
         self.checkBox_5.setChecked(default_options["run_shuffle"])
-        self.lineEdit_2.setText(str(default_options["th_test"]))
+        self.lineEdit_2.setText(f"{float(default_options['th_test']):.2f}")
         self.lineEdit_3.setText(str(default_options["taylor_sig"]))
+        self.lineEdit_4.setText(str(default_options["downsampling"]))
         self.lineEdit_5.setText(str(default_options["taylor_cut"]))
         self.lineEdit_6.setText(str(default_options["th_lax"]))
         self.lineEdit_7.setText(str(default_options["th_sqr"]))
@@ -189,7 +204,7 @@ class Mine_App(QWidget, Ui_Form):
 
     def reset_validation_state(self):
         """Resets line edit colors and re-enables buttons after restoring defaults."""
-        for widget in [self.lineEdit_2, self.lineEdit_3,
+        for widget in [self.lineEdit_2, self.lineEdit_3, self.lineEdit_4,
                        self.lineEdit_5, self.lineEdit_6, self.lineEdit_7,
                        self.lineEdit_8, self.lineEdit_9, self.lineEdit_10]:
             widget.setPalette(self.style().standardPalette())
@@ -197,6 +212,7 @@ class Mine_App(QWidget, Ui_Form):
         for le, minv, maxv in [
             (self.lineEdit_2, 0, 1),
             (self.lineEdit_3, 0, 1),
+            (self.lineEdit_4, 1, 2147483647),
             (self.lineEdit_5, 0, 1),
             (self.lineEdit_6, 0, 1),
             (self.lineEdit_7, 0, 1),
@@ -204,7 +220,7 @@ class Mine_App(QWidget, Ui_Form):
             (self.lineEdit_9, 0, 100),
             (self.lineEdit_10, 0, 1)
         ]:
-            le.editingFinished.connect(lambda le=le, minv=minv, maxv=maxv: uu.validate_range(le, minv, maxv))
+            le.editingFinished.connect(lambda le=le, minv=minv, maxv=maxv: uu.validate_range(le, minv, maxv, self.valid_fields, self))
 
     def on_run_clicked(self):
 
@@ -263,9 +279,8 @@ class Mine_App(QWidget, Ui_Form):
                 args.extend(["--n_epochs", n_epochs])
             if miner_train_fraction:
                 args.extend(["--miner_train_fraction", miner_train_fraction])
-            if self.checkBox_6.isChecked():
-                if downsampling:
-                    args.extend(["--downsampling", downsampling])
+            if downsampling:
+                args.extend(["--downsampling", downsampling])
 
             subprocess.run(args)
 
