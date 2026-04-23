@@ -88,7 +88,7 @@ class Mine_App(QWidget, Ui_Form):
     def save_to_json(self):
         data = {
             "config": {
-                "episodic":self.checkBox_2.isChecked(),
+                "episodic":self.checkBox_7.isChecked(),
                 "use_time":self.checkBox_6.isChecked(),
                 "run_shuffle":self.checkBox_5.isChecked(),
                 "th_test":self.lineEdit_2.text().strip(),
@@ -140,7 +140,7 @@ class Mine_App(QWidget, Ui_Form):
             QMessageBox.critical(self, "Error", f"Could not read JSON:\n{e}")
             return
 
-        self.checkBox_2.setChecked(data.get("episodic", default_options["episodic"]))
+        self.checkBox_7.setChecked(data.get("episodic", default_options["episodic"]))
         self.checkBox_6.setChecked(data.get("use_time", default_options["use_time"]))
         self.checkBox_5.setChecked(data.get("run_shuffle", default_options["run_shuffle"]))
         self.lineEdit_2.setText(str(data.get("th_test", default_options["th_test"])))
@@ -172,7 +172,7 @@ class Mine_App(QWidget, Ui_Form):
         """Restore UI elements to their default preset values."""
         global default_options
 
-        self.checkBox_2.setChecked(default_options["episodic"])
+        self.checkBox_7.setChecked(default_options["episodic"])
         self.checkBox_6.setChecked(default_options["use_time"])
         self.checkBox_5.setChecked(default_options["run_shuffle"])
         self.lineEdit_2.setText(str(default_options["th_test"]))
@@ -211,7 +211,7 @@ class Mine_App(QWidget, Ui_Form):
         model_name = self.lineEdit.text()
         predictors = self.textEdit.toPlainText().strip().split()
         responses = self.textEdit_2.toPlainText().strip().split()
-        episodic = self.checkBox_2.isChecked()
+        episodic = self.checkBox_7.isChecked()
         use_time = self.checkBox_6.isChecked()
         run_shuffle = self.checkBox_5.isChecked()
         th_test = self.lineEdit_2.text()
