@@ -88,7 +88,7 @@ if __name__ == '__main__':
                                                      "predictor and one response file per episode.",
                           action="store_true")
     a_parser.add_argument("-dsf", "--downsampling", help="The downsampling factor",
-                          type=float, default=default_options['downsampling'])
+                          type=int, default=default_options['downsampling'])
 
     args = a_parser.parse_args()
 

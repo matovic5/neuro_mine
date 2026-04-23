@@ -7,7 +7,7 @@ from neuro_mine.ui.mine_train import Ui_Form
 import neuro_mine.ui.ui_utilities as uu
 import numpy as np
 import os
-from neuro_mine.scripts.neuromine_fit import default_options
+from neuro_mine.scripts.neuromine_train import default_options
 import subprocess
 import sys
 
@@ -23,17 +23,21 @@ class Mine_App(QWidget, Ui_Form):
         validator.setNotation(QDoubleValidator.Notation.StandardNotation)
 
         self.lineEdit.setText(now) # Model Name
-        self.checkBox_2.setChecked(default_options["use_time"]) # Use Time as Predictor
+        self.checkBox_6.setChecked(default_options["use_time"]) # Use Time as Predictor
         self.checkBox_5.setChecked(default_options["run_shuffle"]) # Shuffle Data
         self.lineEdit_2.setValidator(validator) # validate that test score threshold is only 2 decimal places
         self.lineEdit_2.setText(f"{float(default_options['th_test']):.2f}") # Test Score Threshold
         self.lineEdit_3.setText(str(default_options["taylor_sig"])) # Taylor Expansion Significance Threshold
+        self.lineEdit_4.setValidator(QIntValidator(1,2147483647,self))
+        self.lineEdit_4.setText(str(default_options["downsampling"]))
+        self.checkBox_4.toggled.connect(self.lineEdit_4.setEnabled)
+        self.lineEdit_4.setEnabled(self.checkBox_4.isChecked())
         self.lineEdit_5.setText(str(default_options["taylor_cut"])) # Taylor Cutoff
         self.lineEdit_6.setText(str(default_options["th_lax"]))  # Linear Fit Variance explained cutoff
         self.lineEdit_7.setText(str(default_options["th_sqr"])) # Square Fit Variance explained cutoff
         self.checkBox_3.setChecked(default_options["jacobian"]) # Store Linear Receptive Fields (Jacobians)
         self.lineEdit_8.setText(str(default_options["history"])) # Model History [s]
-        self.lineEdit_9.setValidator(QIntValidator(1, 100, self)) # limit epochs to integers
+        self.lineEdit_9.setValidator(QIntValidator(1, 500, self)) # limit epochs to integers
         self.lineEdit_9.setText(str(default_options["n_epochs"])) # Number of Epochs
         self.lineEdit_10.setText(str(default_options["miner_train_fraction"])) # Number of Epochs # Fraction of Data to use to Train
 
@@ -50,6 +54,7 @@ class Mine_App(QWidget, Ui_Form):
         for le, minv, maxv in [
             (self.lineEdit_2, 0, 1),
             (self.lineEdit_3, 0, 1),
+            (self.lineEdit_4, 0, 2147483647),
             (self.lineEdit_5, 0, 1),
             (self.lineEdit_6, 0, 1),
             (self.lineEdit_7, 0, 1),
@@ -83,8 +88,8 @@ class Mine_App(QWidget, Ui_Form):
     def save_to_json(self):
         data = {
             "config": {
-                "episodic":self.checkBox.isChecked(),
-                "use_time":self.checkBox_2.isChecked(),
+                "episodic":self.checkBox_2.isChecked(),
+                "use_time":self.checkBox_6.isChecked(),
                 "run_shuffle":self.checkBox_5.isChecked(),
                 "th_test":self.lineEdit_2.text().strip(),
                 "taylor_sig":self.lineEdit_3.text().strip(),
@@ -135,8 +140,8 @@ class Mine_App(QWidget, Ui_Form):
             QMessageBox.critical(self, "Error", f"Could not read JSON:\n{e}")
             return
 
-        self.checkBox.setChecked(data.get("episodic", default_options["episodic"]))
-        self.checkBox_2.setChecked(data.get("use_time", default_options["use_time"]))
+        self.checkBox_2.setChecked(data.get("episodic", default_options["episodic"]))
+        self.checkBox_6.setChecked(data.get("use_time", default_options["use_time"]))
         self.checkBox_5.setChecked(data.get("run_shuffle", default_options["run_shuffle"]))
         self.lineEdit_2.setText(str(data.get("th_test", default_options["th_test"])))
         self.lineEdit_3.setText(str(data.get("taylor_sig", default_options["taylor_sig"])))
@@ -147,6 +152,10 @@ class Mine_App(QWidget, Ui_Form):
         self.checkBox_3.setChecked(data.get("jacobian", default_options["jacobian"]))
         self.lineEdit_9.setText(str(data.get("n_epochs", default_options["n_epochs"])))
         self.lineEdit_10.setText(str(data.get("miner_train_fraction", default_options["miner_train_fraction"])))
+        downsampling = data.get("downsampling", default_options["downsampling"])
+        self.lineEdit_4.setText(str(downsampling))
+        self.checkBox_4.setChecked(downsampling > 1)
+
 
     def update_button_states(self):
         all_valid = all(self.valid_fields.values())
@@ -163,8 +172,8 @@ class Mine_App(QWidget, Ui_Form):
         """Restore UI elements to their default preset values."""
         global default_options
 
-        self.checkBox.setChecked(default_options["episodic"])
-        self.checkBox_2.setChecked(default_options["use_time"])
+        self.checkBox_2.setChecked(default_options["episodic"])
+        self.checkBox_6.setChecked(default_options["use_time"])
         self.checkBox_5.setChecked(default_options["run_shuffle"])
         self.lineEdit_2.setText(str(default_options["th_test"]))
         self.lineEdit_3.setText(str(default_options["taylor_sig"]))
@@ -202,8 +211,8 @@ class Mine_App(QWidget, Ui_Form):
         model_name = self.lineEdit.text()
         predictors = self.textEdit.toPlainText().strip().split()
         responses = self.textEdit_2.toPlainText().strip().split()
-        episodic = self.checkBox.isChecked()
-        use_time = self.checkBox_2.isChecked()
+        episodic = self.checkBox_2.isChecked()
+        use_time = self.checkBox_6.isChecked()
         run_shuffle = self.checkBox_5.isChecked()
         th_test = self.lineEdit_2.text()
         taylor_sig = self.lineEdit_3.text()
@@ -215,8 +224,9 @@ class Mine_App(QWidget, Ui_Form):
         config = self.lineEdit_11.text()
         n_epochs = self.lineEdit_9.text()
         miner_train_fraction = self.lineEdit_10.text()
+        downsampling = self.lineEdit_4.text()
 
-        with importlib.resources.path("neuro_mine.scripts", "neuromine_fit.py") as script_path:
+        with importlib.resources.path("neuro_mine.scripts", "neuromine_train.py") as script_path:
             args = [sys.executable, str(script_path)]
 
             if model_name:
@@ -253,6 +263,9 @@ class Mine_App(QWidget, Ui_Form):
                 args.extend(["--n_epochs", n_epochs])
             if miner_train_fraction:
                 args.extend(["--miner_train_fraction", miner_train_fraction])
+            if self.checkBox_6.isChecked():
+                if downsampling:
+                    args.extend(["--downsampling", downsampling])
 
             subprocess.run(args)
 

@@ -9,7 +9,7 @@ import os
 import neuro_mine.lib.file_handling as fh
 import json
 from os import path
-from neuro_mine.scripts.neuromine_fit import ConfigException
+from neuro_mine.scripts.neuromine_train import ConfigException
 from warnings import warn
 import numpy as np
 from typing import Optional

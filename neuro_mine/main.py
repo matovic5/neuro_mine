@@ -7,7 +7,7 @@ import importlib.resources
 import sys
 
 def main():
-    with importlib.resources.path("neuro_mine.scripts", "neuromine_fit.py") as script_path:
+    with importlib.resources.path("neuro_mine.scripts", "neuromine_train.py") as script_path:
         if len(sys.argv) > 1:
             subprocess.run(["python", str(script_path)] + sys.argv[1:])
         else:
