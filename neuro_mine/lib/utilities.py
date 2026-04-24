@@ -288,6 +288,9 @@ def interp_events(x: np.ndarray, xp: np.ndarray, fp: np.ndarray) -> np.ndarray:
     return f
 
 
+_shuffle_buffer_size = 1000  # limit dataset shuffle buffer to 1000 rows
+
+
 class EpisodicData:
     def __init__(self, input_steps, regressors: List[List], ca_responses: List[np.ndarray], n_ep_for_train=-1):
         """
@@ -324,7 +327,7 @@ class EpisodicData:
                 dset = data.training_data(sample_ix, batch_size)
             else:
                 dset = dset.concatenate(data.training_data(sample_ix, batch_size))
-        dset.shuffle(dset.cardinality(), reshuffle_each_iteration=True).batch(batch_size, drop_remainder=True)
+        dset.shuffle(_shuffle_buffer_size, reshuffle_each_iteration=True).batch(batch_size, drop_remainder=True)
         return dset.prefetch(tf.data.AUTOTUNE)
 
     def test_data(self, sample_ix: int, batch_size=32):
@@ -344,7 +347,7 @@ class EpisodicData:
                 dset = data.training_data(sample_ix, batch_size)
             else:
                 dset = dset.concatenate(data.training_data(sample_ix, batch_size))
-        dset.shuffle(dset.cardinality(), reshuffle_each_iteration=True).batch(batch_size, drop_remainder=True)
+        dset.shuffle(_shuffle_buffer_size, reshuffle_each_iteration=True).batch(batch_size, drop_remainder=True)
         return dset.prefetch(tf.data.AUTOTUNE)
 
     def regressor_matrices(self, sample_ix: int) -> List[np.ndarray]:
@@ -426,7 +429,7 @@ class Data:
             for t in range(self.input_steps-1, out_data.size+self.input_steps-1):
                 in_data[t-self.input_steps+1, :, i] = this_reg[0, t-self.input_steps+1:t+1]
         train_ds = tf.data.Dataset.from_tensor_slices((in_data, out_data)).\
-            shuffle(in_data.shape[0], reshuffle_each_iteration=True).batch(batch_size, drop_remainder=True)
+            shuffle(_shuffle_buffer_size, reshuffle_each_iteration=True).batch(batch_size, drop_remainder=True)
         return train_ds.prefetch(tf.data.AUTOTUNE)
 
     def test_data(self, sample_ix: int, batch_size=32):
@@ -457,7 +460,7 @@ class Data:
         :param sample_ix: The index of the cell
         :return: n_timesteps x m_regressors matrix of regressors for the given cell
         """
-        reg_data = np.full((self.ca_responses.shape[1], len(self.regressors)), np.nan).astype(np.float32)
+        reg_data = np.full((self.ca_responses.shape[1], len(self.regressors)), np.nan, dtype=np.float32)
         for i, reg in enumerate(self.regressors):
             if reg.shape[0] == 1:
                 this_reg = reg
