@@ -537,7 +537,9 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
         for i, ct in enumerate(c_thresholds):
             ab_real[i] = np.sum(model_scores > ct) / n_objects
             ab_shuff[i] = np.sum(shuffle_scores > ct) / n_objects
-        enrichment = ab_real / ab_shuff
+        divisor = ab_shuff.copy()
+        divisor[divisor < 1/n_objects] = 1/n_objects  # if no shuffle objects were identified we cannot assume infinite enrichment
+        enrichment = ab_real / divisor
         axes[0].plot(c_thresholds, ab_real, label="Real data")
         axes[0].plot(c_thresholds, ab_shuff, label="Shuffled data")
         axes[0].plot([test_score_thresh, test_score_thresh], [0, 1], 'k--', label="Threshold")
