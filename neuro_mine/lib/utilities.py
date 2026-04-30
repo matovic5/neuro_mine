@@ -9,8 +9,9 @@ from typing import Union, List, Any, Optional, Tuple
 from numba import njit
 from warnings import warn
 import os
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 import tensorflow as tf
+tf.get_logger().setLevel("ERROR")
 
 
 def create_overwrite(storage: Union[h5py.File, h5py.Group], name: str, data: Any, overwrite: bool,
