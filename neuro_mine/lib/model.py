@@ -9,6 +9,8 @@ tf.get_logger().setLevel("ERROR")
 import tensorflow.keras as keras
 from tensorflow.keras import layers, regularizers, initializers
 from typing import Optional, Union
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
 
 class NotInitialized(Exception):
     def __init__(self, message):
