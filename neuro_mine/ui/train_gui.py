@@ -7,7 +7,7 @@ from neuro_mine.ui.mine_train import Ui_Form
 import neuro_mine.ui.ui_utilities as uu
 import numpy as np
 import os
-from neuro_mine.scripts.neuromine_train import default_options
+from neuro_mine.lib.options import default_options
 import subprocess
 import sys
 
