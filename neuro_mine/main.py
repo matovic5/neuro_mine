@@ -14,7 +14,6 @@ def main():
             with importlib.resources.path("neuro_mine.ui", "train_gui.py") as script_path:
                 subprocess.run(["python", str(script_path)])
 
-
 def predict():
     with importlib.resources.path("neuro_mine.scripts", "neuromine_prediction.py") as script_path:
         if len(sys.argv) > 1:
@@ -22,3 +21,10 @@ def predict():
         else:
             with importlib.resources.path("neuro_mine.ui", "predict_gui.py") as script_path:
                 subprocess.run(["python", str(script_path)])
+
+def timetrial():
+    with importlib.resources.path("neuro_mine.scripts", "neuromine_timetrial.py") as script_path:
+        if len(sys.argv) > 1:
+            subprocess.run(["python", str(script_path)] + sys.argv[1:])
+        else:
+            subprocess.run(["python", str(script_path)])

@@ -39,3 +39,4 @@ Homepage = "https://github.com/matovic5/neuro_mine"
 [project.scripts]
 Mine = "neuro_mine.main:main"
 Mine-predict = "neuro_mine.main:predict"
+Time-trial = "neuro_mine.main:timetrial"
