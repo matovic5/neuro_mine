@@ -1,3 +1,8 @@
+import os
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+import logging
+logging.getLogger("tensorflow").setLevel(logging.ERROR)
+
 from .lib.processing import generate_insights, barcode_cluster_plot
 from .lib.mine import Mine, BaseData, MineData, MineSpikingData, MineWarning
 from .lib.taylorDecomp import dca_dr, d2ca_dr2, taylor_predict, taylor_decompose, data_mean_prediction, complexity_scores
