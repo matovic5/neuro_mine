@@ -22,7 +22,7 @@ if __name__ == '__main__':
     # will not work if tensorflow is run on the GPU!!
     os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
-    a_parser = argparse.ArgumentParser(prog="response_prediction.py",
+    a_parser = argparse.ArgumentParser(prog="neuromine_prediction.py",
                                        description="Uses previously fit models to predict responses based on provided"
                                                    " predictor data.")
     a_parser.add_argument("-p", "--predictors", help="Path to CSV files of predictors or alternatively "
