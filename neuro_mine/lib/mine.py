@@ -272,6 +272,15 @@ class Mine:
         else:
             score_function = lambda predicted, real: np.corrcoef(predicted, real)[0, 1]
 
+        # determine a batch size to make sure that for short data we still have more than one batch (this is necessary
+        # as we truncate non-full batches
+        total_res_len = sum([rd.shape[1] for rd in response_data])
+        batch_size = total_res_len // 4
+        if batch_size < 1:
+            batch_size = 1
+        if batch_size > 256:
+            batch_size = 256
+
         # define our outputs
         outs = _Outputs(self.compute_taylor, self.return_jacobians, self.return_hessians, n_responses,
                         n_predictors, self.model_history)
@@ -280,7 +289,7 @@ class Mine:
         # create model once
         m, init_weights = self._create_init_model(n_predictors)
         for cell_ix in range(n_responses):
-            tset = ep_data.training_data(cell_ix, batch_size=256)
+            tset = ep_data.training_data(cell_ix, batch_size=batch_size)
             # reset weights to pre-trained state
             m.set_weights(init_weights)
             # the following appears to be required to re-init variables?
@@ -317,7 +326,7 @@ class Mine:
                           f"Test score={outs.scores_test[cell_ix]} which was below cut-off.")
                 continue
             # compute first and second order derivatives
-            tset = ep_data.training_data(cell_ix, 256)
+            tset = ep_data.training_data(cell_ix, batch_size=batch_size)
             all_inputs = []
             for inp, outp in tset:
                 all_inputs.append(inp.numpy())
@@ -426,6 +435,14 @@ class Mine:
         train_frames = int(self.train_fraction * res_len)
         n_predictors = len(pred_data)
 
+        # determine a batch size to make sure that for short data we still have more than one batch (this is necessary
+        # as we truncate non-full batches
+        batch_size = res_len // 4
+        if batch_size < 1:
+            batch_size = 1
+        if batch_size > 256:
+            batch_size = 256
+
         # define our score function
         if self.fit_spikes:
             # the spiking model returns log-probabilities by default, hence need to transform!
@@ -441,7 +458,7 @@ class Mine:
         # create model once
         m, init_weights = self._create_init_model(n_predictors)
         for cell_ix in range(n_responses):
-            tset = data_obj.training_data(cell_ix, batch_size=256)
+            tset = data_obj.training_data(cell_ix, batch_size=batch_size)
             # reset weights to pre-trained state
             m.set_weights(init_weights)
             # the following appears to be required to re-init variables?
@@ -466,7 +483,7 @@ class Mine:
                           f"Test score={outs.scores_test[cell_ix]} which was below cut-off.")
                 continue
             # compute first and second order derivatives
-            tset = data_obj.training_data(cell_ix, 256)
+            tset = data_obj.training_data(cell_ix, batch_size=batch_size)
             all_inputs = []
             for inp, outp in tset:
                 all_inputs.append(inp.numpy())
