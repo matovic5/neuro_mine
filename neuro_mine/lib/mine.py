@@ -205,12 +205,13 @@ class Mine:
         self.verbose = True
         self.fit_spikes = fit_spikes
 
-    def _check_inputs(self, pred_data: List[np.ndarray], response_data: np.ndarray) -> None:
+    def _check_inputs(self, pred_data: List[np.ndarray], response_data: np.ndarray, no_std_check=False) -> None:
         """
          Check compatibility and standardization of predictor and response data
         :param pred_data: Predictor data as a list of n_timepoints long vectors. Predictors are shared among all
             responses
         :param response_data: n_responses x n_timepoints matrix of responses
+        :param no_std_check: If set to true, checks for standardization will be suppressed
         """
         # check for matching sizes
         res_len = response_data.shape[1]
@@ -218,6 +219,8 @@ class Mine:
             if pd.size != res_len:
                 raise ValueError(f"Predictor {i} has a different number of timesteps than the responses. {pd.size} vs. "
                                  f"{res_len}")
+        if no_std_check:
+            return
         # warn user if data is not standardized - however for spiking analysis data should not be standardized!
         if not self.fit_spikes:
             if (not np.allclose(np.mean(response_data, 1), 0, atol=1e-2)
@@ -262,7 +265,7 @@ class Mine:
             else:
                 if rd.shape[0] != n_responses:
                     raise ValueError("Response sets across episodes must have the same response count")
-            self._check_inputs(pd, rd)
+            self._check_inputs(pd, rd, no_std_check=True)
         train_ep = int(self.train_fraction * len(pred_data))
 
         # define our score function
