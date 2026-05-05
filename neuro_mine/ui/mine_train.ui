@@ -588,7 +588,7 @@
         </sizepolicy>
        </property>
        <property name="text">
-        <string>Yes</string>
+        <string/>
        </property>
       </widget>
      </item>
@@ -639,7 +639,7 @@
         </sizepolicy>
        </property>
        <property name="text">
-        <string>Yes</string>
+        <string/>
        </property>
       </widget>
      </item>
@@ -816,7 +816,7 @@
         </sizepolicy>
        </property>
        <property name="text">
-        <string>Yes</string>
+        <string/>
        </property>
       </widget>
      </item>
@@ -830,7 +830,7 @@
      <item row="0" column="3" colspan="3">
       <widget class="QCheckBox" name="checkBox_4">
        <property name="text">
-        <string>Yes</string>
+        <string/>
        </property>
       </widget>
      </item>
@@ -856,7 +856,7 @@
         </sizepolicy>
        </property>
        <property name="text">
-        <string>Yes</string>
+        <string/>
        </property>
       </widget>
      </item>
