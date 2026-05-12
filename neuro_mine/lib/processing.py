@@ -295,7 +295,7 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
 
     # store all output file in a sub-folder of the response file folder - for episodic data we use the first response
     # file to indicate the storage location, same as for non-episodic data
-    output_folder = path.join(path.split(resp_path[0])[0], "output")
+    output_folder = path.join(path.split(resp_path[0])[0], f"{your_model}")
     if not path.exists(output_folder):
         os.makedirs(output_folder)
 
@@ -336,12 +336,13 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
             ip_resp_data = downsample_mat_list(ip_resp_data, downsampling, is_spike_data)
             ip_time = [ipd[:, 0] for ipd in ip_pred_data]
 
+    output_file_name = path.splitext(path.split(resp_path[0])[-1])[0]
     # Save interpolated data with chosen column names if verbose flag is set - currently not for episodic data
     if miner_verbose and not is_episodic:
         df_ip_resp_data = pd.DataFrame(ip_resp_data, columns=resp_header)
-        df_ip_resp_data.to_csv(path.join(output_folder, f"MINE_{your_model}_interpolated_responses.csv"), index=False)
+        df_ip_resp_data.to_csv(path.join(output_folder, f"MINE_{output_file_name}_interpolated_responses.csv"), index=False)
         df_ip_pred_data = pd.DataFrame(ip_pred_data, columns=pred_header)
-        df_ip_pred_data.to_csv(path.join(output_folder, f"MINE_{your_model}_interpolated_predictors.csv"), index=False)
+        df_ip_pred_data.to_csv(path.join(output_folder, f"MINE_{output_file_name}_interpolated_predictors.csv"), index=False)
 
     # perform data-appropriate standardization of predictors and responses
     # save standardizations for storage
@@ -397,7 +398,7 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
 
     configuration["run"]["model_history_frames"] = model_history
     # Save configuration to file
-    with open(path.join(output_folder, f"MINE_{your_model}_run_config.json"), 'w') as config_file:
+    with open(path.join(output_folder, f"MINE_{output_file_name}_run_config.json"), 'w') as config_file:
         json.dump(configuration, config_file, indent=2)
 
     taylor_look_ahead = int(np.round(model_history * taylor_look_fraction, 0))
@@ -437,7 +438,7 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
     # Set taylor_pred_every based on history length
     taylor_pred_every = model_history
 
-    weight_file_name = f"MINE_{your_model}_weights.hdf5"
+    weight_file_name = f"MINE_{output_file_name}_weights.hdf5"
     with h5py.File(path.join(output_folder, weight_file_name), "w") as weight_file:
         w_grp = weight_file.create_group("fit")
         miner = Mine(miner_train_fraction, model_history, test_score_thresh, True, fit_jacobian,
@@ -472,7 +473,7 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
             else:
                 mdata_shuff = miner.analyze_episodic(mine_pred, mine_resp_shuff)
 
-    full_ana_file_name = f"MINE_{your_model}_analysis.hdf5"
+    full_ana_file_name = f"MINE_{output_file_name}_analysis.hdf5"
     with h5py.File(path.join(output_folder, full_ana_file_name), "w") as ana_file:
         std_grp = ana_file.create_group("standardization")
         std_grp.create_dataset("m_pred", data=m_pred)
@@ -490,7 +491,7 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
     ###
     predictor_columns = pred_header if time_as_pred else pred_header[1:]
     response_names = resp_header[1:]
-    interpret_name = f"MINE_{your_model}_Insights.csv"
+    interpret_name = f"MINE_{output_file_name}_Insights.csv"
     interpret_df = generate_insights(mdata, is_spike_data, predictor_columns, response_names,
                                      test_score_thresh=test_score_thresh,
                                      taylor_sig=taylor_sig,
@@ -513,7 +514,7 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
     if fit_jacobian and np.any(model_scores >= test_score_thresh):
         for i, pc in enumerate(predictor_columns):
             jac_dict = {"Response": []} | {f"{time_from_index(t)}": [] for t in range(model_history)}
-            jac_file_name = f"MINE_{your_model}_ReceptiveFields_{pc}.csv"
+            jac_file_name = f"MINE_{output_file_name}_ReceptiveFields_{pc}.csv"
             for j in range(n_objects):
                 if np.any(np.isnan(mdata.jacobians[j, :])):
                     continue
@@ -555,7 +556,7 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
         axes[1].set_xlabel(f"Test {metric_label} cutoff")
         axes[1].set_ylabel("Enrichment over shuffle")
         fig.tight_layout()
-        fig.savefig(path.join(output_folder, f"MINE_{your_model}_TestMetrics.pdf"))
+        fig.savefig(path.join(output_folder, f"MINE_{output_file_name}_TestMetrics.pdf"))
 
     # plot linearity metrics and thresholds
     if np.any(model_scores >= test_score_thresh):
@@ -567,11 +568,11 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
         pl.ylim(-1, 1)
         pl.xlabel("Linear approximation $R^2$")
         pl.ylabel("2nd order approximation $R^2$")
-        fig.savefig(path.join(output_folder, f"MINE_{your_model}_LinearityMetrics.pdf"))
+        fig.savefig(path.join(output_folder, f"MINE_{output_file_name}_LinearityMetrics.pdf"))
 
         # perform barcode clustering
         fig, df_barcode = barcode_cluster_plot(interpret_df[interpret_df["Fit"] == "Y"], predictor_columns)
-        fig.savefig(path.join(output_folder, f"MINE_{your_model}_BarcodeUpsetPlot.pdf"))
+        fig.savefig(path.join(output_folder, f"MINE_{output_file_name}_BarcodeUpsetPlot.pdf"))
 
         # augment insights with barcodes and save
         barcode_cluster_numbers = np.full(interpret_df.shape[0], -1, dtype=int)

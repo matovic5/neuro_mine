@@ -142,7 +142,7 @@ if __name__ == '__main__':
                     },
                 "run":
                     {
-                        "model_name": your_model if len(file_pairs)==1 else f"{your_model}_{i}",
+                        "model_name": your_model,
                         "predictor_file": pair[1],
                         "response_file": pair[0],
                         "timestamp": datetime.now().now().isoformat(),
