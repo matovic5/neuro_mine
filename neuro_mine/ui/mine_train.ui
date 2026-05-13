@@ -51,7 +51,7 @@
     <rect>
      <x>10</x>
      <y>40</y>
-     <width>541</width>
+     <width>581</width>
      <height>261</height>
     </rect>
    </property>
@@ -71,17 +71,17 @@
      <string/>
     </property>
    </widget>
-   <widget class="QWidget" name="layoutWidget">
+   <widget class="QWidget" name="">
     <property name="geometry">
      <rect>
-      <x>10</x>
-      <y>26</y>
-      <width>524</width>
+      <x>11</x>
+      <y>27</y>
+      <width>561</width>
       <height>231</height>
      </rect>
     </property>
-    <layout class="QGridLayout" name="gridLayout_3">
-     <item row="0" column="0" colspan="2">
+    <layout class="QGridLayout" name="gridLayout">
+     <item row="0" column="0">
       <widget class="QTextEdit" name="textEdit">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -91,7 +91,7 @@
        </property>
       </widget>
      </item>
-     <item row="0" column="2" colspan="2">
+     <item row="0" column="1">
       <widget class="QTextEdit" name="textEdit_2">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -115,28 +115,6 @@
       </widget>
      </item>
      <item row="1" column="1">
-      <widget class="QLabel" name="label_20">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="toolTip">
-        <string/>
-       </property>
-       <property name="whatsThis">
-        <string>Predictor file(s) should be .csv format but with any type of delimiter; Time must be in the first column and all columns must have headers</string>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-       <property name="pixmap">
-        <pixmap resource="resources.qrc">:/question.png</pixmap>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="2">
       <widget class="QPushButton" name="pushButton_3">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -146,28 +124,6 @@
        </property>
        <property name="text">
         <string>Browse Response File(s)...</string>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="3">
-      <widget class="QLabel" name="label_21">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="toolTip">
-        <string/>
-       </property>
-       <property name="whatsThis">
-        <string>Response file(s) should be .csv format but with any type of delimiter; time must be in the first column</string>
-       </property>
-       <property name="text">
-        <string/>
-       </property>
-       <property name="pixmap">
-        <pixmap resource="resources.qrc">:/question.png</pixmap>
        </property>
       </widget>
      </item>
