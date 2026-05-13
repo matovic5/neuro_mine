@@ -28,7 +28,8 @@ dependencies = [
 
 [project.optional-dependencies]
 docs = ["sphinx",
-        "pydata-sphinx-theme"]
+        "pydata-sphinx-theme",
+        "sphinx-copybutton"]
 
 [tool.setuptools]
 license-files = ["LICENSE"]
