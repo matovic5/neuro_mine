@@ -82,7 +82,7 @@ See possible command line prompets to customize the model
 
 Training GUI Explanation
 
-.. image:: _static/GUI-train-README.png
+.. image:: _static/20260513_RTD-TrainGUI.png
 
 Training Parameter Explanation
 
@@ -92,6 +92,11 @@ Training Parameter Explanation
 
    * - Name
      - Explanation
+
+   * - Downsampling Factor [-dsf]
+     - Reduces size of predictor and reponse datasets by averaging according to the specified factor, which increases processing speed and decreases runtime. E.g., if the dataset has 10,000 rows, setting the Downsampling Factor to 10 will average every 10 rows around the center, sample the every 10th row for time, and reduce the data set to 1000 rows overall.
+
+       If dataset size exceeds computational memory, the program will not be able to run and a downsampling factor will be recommended in the command line.
 
    * - Test Score Threshold [-ct]
      - Sets the minimal correlation between model predictions and true outcomes needed on test data to consider a response “fit.” Changing this value will have the greatest influence on results because it filters responses whose test correlation is below the threshold.
@@ -115,7 +120,7 @@ Training Parameter Explanation
 
        *Note on episodic data:* Train/test sets are split by episodes. For example, if an experiment contains 10 episodes, the first 8 are used for training and the last 2 for testing at the default value.
 
-   * - Cutoff [-tc]
+   * - Taylor Cutoff [-tc]
      - Minimal fraction of variance explained that must be lost for a predictor to be considered driving a response.
 
        A value of 0.1 is a sensible default when neurons respond robustly. If responses are expected to be stochastic, a value of 0 may be more appropriate.
@@ -163,6 +168,44 @@ See possible command line prompets to parametrize the prediction
 Prediction GUI Explanation
 
 .. image:: _static/GUI-predict-README.png
+
+------------
+
+Advanced code usage examples
+==============
+
+All major classes and functions that make up MINE are readily importable into user code for advanced integration.
+
+Import of MINE class for direct access to fit object:
+
+.. code-block:: bash
+
+    import neuro_mine as nm
+    # load predictors and responses from desired files
+    # predictors: List[n_timepoints long predictors]
+    # responses: Array[n_responses x n_timepoints]
+    # Note: At this level history and taylor look-ahead are provided in frames not time units
+    miner = nm.Mine(train_fraction=2/3, model_history=50, score_cut=0.71, compute_taylor=True, return_jacobians=False,
+                    taylor_look_ahead=25, taylor_pred_every=5, fit_spikes=False)
+    mdata = miner.analyze_data(predictors, responses)
+    # process mdata object in further code
+
+
+In addition, the underlying CNN model can be imported directly:
+
+.. code-block:: bash
+
+    import neuro_mine as nm
+    # Note: input_length is the same as model history
+    # This approach allows customizing the complexity of the model
+    model = nm.ActivityPredictor(n_units=1024, n_conv=150, drop_rate=0.5, input_length=50, activation="swish",
+                                 predict_spikes=True)
+    # Note: the datacount input is unused
+    nm.train_model(model, train_data, n_epochs=50, datacount=0)
+    # Further processing on model object, e.g. calculating linear derivative of the output with respect
+    # to all inputs in the neighborhood of X0
+    nm.dca_dr(model, X0)
+
 
 ------------
 
