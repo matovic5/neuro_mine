@@ -12,7 +12,7 @@ release = '0.8.9'
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
-    "sphinx.ext.copybutton"
+    "sphinx_copybutton"
 ]
 
 templates_path = ['_templates']
