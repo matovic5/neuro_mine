@@ -5,13 +5,14 @@
 project = 'NeuroMINE'
 copyright = '2026, Danica Matovic, Martin Haesemeyer'
 author = 'Danica Matovic, Martin Haesemeyer'
-release = '0.8.0'
+release = '0.8.9'
 
 # -- General configuration ---------------------------------------------------
 
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
+    "sphinx_copybutton"
 ]
 
 templates_path = ['_templates']
