@@ -7,6 +7,7 @@ Neuro-MINE Documentation
 .. image:: https://img.shields.io/pypi/v/neuro-mine
    :target: https://pypi.org/project/neuro-mine/
    :alt: PyPI - Version
+
 .. image:: https://img.shields.io/github/license/matovic5/neuro_mine
    :target: https://github.com/matovic5/neuro_mine/blob/main/LICENSE.txt
    :alt: GitHub License
@@ -82,7 +83,7 @@ Possible command line arguments for fitting with Neuro-MINE
 
 .. code-block:: bash
 
-    Mine -p <predictor directory or filepath(s)> -r <respose directory or filepath(s)> -ut <use time> -sh <run shuffle> -ct <test score threshold> -ts <Taylor significance> -la <linear fit variance fraction> -lsq <square fit variance fraction> -n <name of model> -mh <model history (seconds)> -tl <Taylor lookahead> -j <Store Jacobians> -o <JSON filepath with existing parameters>  -e <number of epochs> -mq <non-verbose in terminal> -mtf <fraction of data for training vs testing> -eps <data is eposidic> -dsf <downsampling factor?
+    Mine -p <predictor directory or filepath(s)> -r <response directory or filepath(s)> -ut <use time> -sh <run shuffle> -ct <test score threshold> -ts <Taylor significance> -la <linear fit variance fraction> -lsq <square fit variance fraction> -n <name of model> -mh <model history (seconds)> -tl <Taylor lookahead> -j <Store Jacobians> -o <JSON filepath with existing parameters>  -e <number of epochs> -mq <non-verbose in terminal> -mtf <fraction of data for training vs testing> -eps <data is episodic> -dsf <downsampling factor?
 
 See command line prompts to customize the model
 
@@ -171,7 +172,7 @@ Possible command line arguments for prediction with Neuro-MINE
 
     Mine-predict -p <predictor directory or filepath(s)> -o <JSON filepath with model parameters> -w <hdf5 filepath with weights> -a <hdf5 filepath with analysis of fit> -ct <test score threshold>
 
-See possible command line prompets to parametrize the prediction
+See possible command line prompts to parametrize the prediction
 
 .. code-block:: bash
 
