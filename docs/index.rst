@@ -10,7 +10,7 @@ Neuro-MINE Documentation
    :alt: GitHub License
 
 
-**Neuro-MINE** (Model Identification of Neural Encoding) is a tool for analyzing neural reposnse data
+**Neuro-MINE** (Model Identification of Neural Encoding) is a tool for analyzing neural response data
 and making statistical inferences.
 
 Neuro-MINE allows users to train a flexible, convolutional neural network (CNN)
