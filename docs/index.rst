@@ -5,8 +5,10 @@ Neuro-MINE Documentation
 =========================
 
 .. image:: https://img.shields.io/pypi/v/neuro-mine
+   :target: https://pypi.org/project/neuro-mine/
    :alt: PyPI - Version
 .. image:: https://img.shields.io/github/license/matovic5/neuro_mine
+   :target: https://github.com/matovic5/neuro_mine/blob/main/LICENSE.txt
    :alt: GitHub License
 
 
