@@ -4,6 +4,12 @@
 Neuro-MINE Documentation
 =========================
 
+.. image:: https://img.shields.io/pypi/v/neuro-mine
+   :alt: PyPI - Version
+.. image:: https://img.shields.io/github/license/matovic5/neuro_mine
+   :alt: GitHub License
+
+
 **Neuro-MINE** (Model Identification of Neural Encoding) is a tool for analyzing neural reposnse data
 and making statistical inferences.
 
