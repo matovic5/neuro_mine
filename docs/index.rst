@@ -4,7 +4,7 @@
 Neuro-MINE Documentation
 =========================
 
-**Neuro-MINE** (Model Identification of Neural Encoding) is a tool for analyzing neural reposnse data
+**Neuro-MINE** (Model Identification of Neural Encoding) is a tool for analyzing neural response data
 and making statistical inferences.
 
 Neuro-MINE allows users to train a flexible, convolutional neural network (CNN)
@@ -18,15 +18,17 @@ Use Cases:
     - Any type of predictor data (stimuli and/or behavior)
     - Any type of response data (imaging or spikes)
     - Episodic or non-episodic data
-    - Generate response predictions from new predictors using an existing model
+    - Generate response predictions from new inputs using an existing model
     - While all descriptions reference neurons, neuro-mine can process any time-varying data
 
 Data Requirements:
-    - File type: .csv with any delimiter
-    - Predictor data **must** have time as the first column and it must be named 'time'; for optimal outputs, predictor columns should be meaningfully labelled (e.g., 'temperature' or 'left_paw') in the header
-    - Reponse data **must** have time as the first column and the responses must be in adjacent columns; column titles (a header) are supported but are not mandatory
+    - Input file types: Any delimited file format such as comma-separated-value, tab-separated-value, etc. with time-varying data
+    - All input files must be organized such that features are across columns and timepoints across rows
+    - Predictor data **must** have time as the first column; for easily interpretable outputs, predictor columns should be meaningfully labelled (e.g., 'temperature' or 'left_paw') in the header
+    - Reponse data **must** have time as the first column; column titles (a header) are supported but are not mandatory
     - Within episodes, data must be continuous in time, and time must be monotonically increasing
-    - Common time encodings are supported but note that if times are recorded without dates and/or AM/PM designations, ordering of timepoints will be ambiguous.
+    - Common time encodings are supported but note that if times are recorded without dates and/or AM/PM designations, ordering of timepoints can be ambiguous
+    - Furthermore, time encoding **must** match between predictor and response files such that predictor times can be aligned with response times
 
 .. note::
     ️Ambiguities in the time column will lead to failures: Be mindful of rounding when saving data to CSV which can assign the same time values to successive timepoints.
@@ -72,9 +74,9 @@ Possible command line arguments for fitting with Neuro-MINE
 
 .. code-block:: bash
 
-    Mine -p <predictor directory or filepath(s)> -r <respose directory or filepath(s)> -ut <use time> -sh <run shuffle> -ct <test score threshold> -ts <Taylor significance> -la <linear fit variance fraction> -lsq <square fit variance fraction> -n <name of model> -mh <model history (seconds)> -tl <Taylor lookahead> -j <Store Jacobians> -o <JSON filepath with existing parameters>  -e <epoch number> -mq <non-verbose in terminal> -mtf <fraction of data for training vs testing> -eps <data is eposidic>
+    Mine -p <predictor directory or filepath(s)> -r <respose directory or filepath(s)> -ut <use time> -sh <run shuffle> -ct <test score threshold> -ts <Taylor significance> -la <linear fit variance fraction> -lsq <square fit variance fraction> -n <name of model> -mh <model history (seconds)> -tl <Taylor lookahead> -j <Store Jacobians> -o <JSON filepath with existing parameters>  -e <number of epochs> -mq <non-verbose in terminal> -mtf <fraction of data for training vs testing> -eps <data is eposidic> -dsf <downsampling factor>
 
-See possible command line prompets to customize the model
+See command line prompts to customize the model
 
 .. code-block:: bash
 
@@ -94,7 +96,7 @@ Training Parameter Explanation
      - Explanation
 
    * - Downsampling Factor [-dsf]
-     - Reduces size of predictor and reponse datasets by averaging according to the specified factor, which increases processing speed and decreases runtime. E.g., if the dataset has 10,000 rows, setting the Downsampling Factor to 10 will average every 10 rows around the center, sample the every 10th row for time, and reduce the data set to 1000 rows overall.
+     - Reduces size of predictor and reponse datasets by averaging according to the specified factor, which increases processing speed and decreases runtime. E.g., if the dataset has 10,000 rows, setting the Downsampling Factor to 10 will average every 10 rows around the center, sample every 10th row for time, and reduce the data set to 1000 rows overall.
 
        If dataset size exceeds computational memory, the program will not be able to run and a downsampling factor will be recommended in the command line.
 
@@ -129,7 +131,9 @@ Training Parameter Explanation
      - After correcting for multiple comparisons, the loss in explained variance must be significantly larger than the **Cutoff** at this p-value for a predictor to be considered driving a response.
 
    * - Look Ahead [-tl]
-     - Fraction of model history representing how many future timepoints are predicted by the Taylor expansion.
+     - Sets the time over which the Taylor expansion will predict into the future as a fraction of model history.
+
+       The default value of 0.5 means that for a 10 second long history, Taylor expansions will be used to predict 5 seconds into the future.
 
        Increasing this value decreases prediction fidelity and can lead to unstable predictor assignments. Lowering it toward 0 improves prediction accuracy but may reduce stability because predictions become trivial.
 
