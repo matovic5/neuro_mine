@@ -5,7 +5,7 @@
 project = 'NeuroMINE'
 copyright = '2026, Danica Matovic, Martin Haesemeyer'
 author = 'Danica Matovic, Martin Haesemeyer'
-release = '0.8.9'
+release = '0.9.0'
 
 # -- General configuration ---------------------------------------------------
 
