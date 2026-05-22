@@ -29,6 +29,7 @@ starting points for further analysis.
 
 *GitHub Repository of Original Publication:* https://github.com/haesemeyer/mine_pub
 <br>*Lab Website:* https://www.thermofish.org/
+<br>*Python Package:* https://pypi.org/project/neuro-mine/
 
 All code is licensed under the MIT license. See LICENSE for details.
 <br>© Martin Haesemeyer, Jamie D Costabile, Kaarthik A Balakrishnan, and Danica Matovic 2020-2025
