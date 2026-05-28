@@ -247,14 +247,9 @@ class Mine_App(QWidget, Ui_Form):
         miner_train_fraction = self.lineEdit_10.text()
         downsampling = self.lineEdit_4.text()
 
-        with importlib.resources.path(
-                "neuro_mine.scripts",
-                "neuromine_train.py"
-        ) as script_path:
-            args = [
-                sys.executable,
-                str(script_path)
-            ]
+
+        with importlib.resources.path("neuro_mine.scripts", "neuromine_train.py") as script_path:
+            args = [sys.executable, str(script_path)]
 
             if model_name:
                 args.extend(["--model_name", model_name])
@@ -293,9 +288,9 @@ class Mine_App(QWidget, Ui_Form):
             if downsampling:
                 args.extend(["--downsampling", downsampling])
 
-            QApplication.quit()
+                subprocess.run(args)
 
-            os.execv(sys.executable, args)
+            QApplication.quit()
 
 def run_ui():
     app = QApplication(sys.argv)
