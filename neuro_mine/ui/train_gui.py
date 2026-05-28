@@ -1,7 +1,6 @@
 import datetime
 import importlib.resources
 import json
-from PySide6.QtCore import QTimer
 from PySide6.QtGui import QPalette, QColor, QIntValidator, QDoubleValidator
 from PySide6.QtWidgets import QApplication, QWidget, QFileDialog, QLineEdit, QCheckBox, QMessageBox
 from neuro_mine.ui.mine_train import Ui_Form
@@ -55,7 +54,7 @@ class Mine_App(QWidget, Ui_Form):
         self.lineEdit_10.setText(str(default_options["miner_train_fraction"])) # Number of Epochs # Fraction of Data to use to Train
 
         # connect signals
-        self.pushButton.clicked.connect(self.close_gui_timed)
+        self.pushButton.clicked.connect(self.on_run_clicked)
         self.pushButton_2.clicked.connect(lambda: uu.browse_multiple_files(self, self.textEdit, "Predictor File(s)", "Data Files (*.csv *.tsv);;All Files (*)", self.last_dir))
         self.pushButton_3.clicked.connect(lambda: uu.browse_multiple_files(self, self.textEdit_2, "Response File(s)", "Data Files (*.csv *.tsv);;All Files (*)", self.last_dir))
         self.pushButton_4.clicked.connect(lambda: self.handle_json_browse(self.lineEdit_11))
@@ -223,11 +222,7 @@ class Mine_App(QWidget, Ui_Form):
         ]:
             le.editingFinished.connect(lambda le=le, minv=minv, maxv=maxv: uu.validate_range(le, minv, maxv, self.valid_fields, self))
 
-    def close_gui_timed(self):
-        self.close()
-        QTimer.singleShot(0,self.execute_train)
-
-    def execute_train(self):
+    def on_run_clicked(self):
 
         model_name = self.lineEdit.text()
         predictors = self.textEdit.toPlainText().strip().split()
@@ -246,7 +241,6 @@ class Mine_App(QWidget, Ui_Form):
         n_epochs = self.lineEdit_9.text()
         miner_train_fraction = self.lineEdit_10.text()
         downsampling = self.lineEdit_4.text()
-
 
         with importlib.resources.path("neuro_mine.scripts", "neuromine_train.py") as script_path:
             args = [sys.executable, str(script_path)]
@@ -288,9 +282,9 @@ class Mine_App(QWidget, Ui_Form):
             if downsampling:
                 args.extend(["--downsampling", downsampling])
 
-                subprocess.run(args)
+            subprocess.run(args)
 
-            QApplication.quit()
+        QApplication.quit()
 
 def run_ui():
     app = QApplication(sys.argv)
