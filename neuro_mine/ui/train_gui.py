@@ -1,15 +1,14 @@
 import datetime
 import importlib.resources
 import json
-from PySide6 import QTimer
 from PySide6.QtGui import QPalette, QColor, QIntValidator, QDoubleValidator
 from PySide6.QtWidgets import QApplication, QWidget, QFileDialog, QLineEdit, QCheckBox, QMessageBox
+from PySide6.QtCore import QProcess
 from neuro_mine.ui.mine_train import Ui_Form
 import neuro_mine.ui.ui_utilities as uu
 import numpy as np
 import os
 from neuro_mine.lib.options import default_options
-import subprocess
 import sys
 
 class Mine_App(QWidget, Ui_Form):
@@ -18,6 +17,9 @@ class Mine_App(QWidget, Ui_Form):
         self.setupUi(self)
         self.lineEdit.setFocus()
         self.default_options = default_options
+
+        # process for running command line program
+        self.p = None
 
         now = datetime.datetime.now().strftime("%b%d%Y_%I%M%p")
         validator = QDoubleValidator(0.0, 1.0, 2 ,self)
@@ -55,7 +57,7 @@ class Mine_App(QWidget, Ui_Form):
         self.lineEdit_10.setText(str(default_options["miner_train_fraction"])) # Number of Epochs # Fraction of Data to use to Train
 
         # connect signals
-        self.pushButton.clicked.connect(self.close_gui_timed)
+        self.pushButton.clicked.connect(self.on_run_clicked)
         self.pushButton_2.clicked.connect(lambda: uu.browse_multiple_files(self, self.textEdit, "Predictor File(s)", "Data Files (*.csv *.tsv);;All Files (*)", self.last_dir))
         self.pushButton_3.clicked.connect(lambda: uu.browse_multiple_files(self, self.textEdit_2, "Response File(s)", "Data Files (*.csv *.tsv);;All Files (*)", self.last_dir))
         self.pushButton_4.clicked.connect(lambda: self.handle_json_browse(self.lineEdit_11))
@@ -178,7 +180,7 @@ class Mine_App(QWidget, Ui_Form):
         line2_filled = bool(self.textEdit_2.toPlainText().strip())
         required_fields_filled = line4_filled and line2_filled
 
-        self.pushButton.setEnabled(all_valid and required_fields_filled)
+        self.pushButton.setEnabled(all_valid and required_fields_filled and (self.p is None))
 
         self.pushButton_6.setEnabled(all_valid)
 
@@ -223,11 +225,7 @@ class Mine_App(QWidget, Ui_Form):
         ]:
             le.editingFinished.connect(lambda le=le, minv=minv, maxv=maxv: uu.validate_range(le, minv, maxv, self.valid_fields, self))
 
-    def close_gui_timed(self):
-        self.close()
-        QTimer.sinmgleShot(0, self.execute_neuormine_train)
-
-    def execute_neuormine_train(self):
+    def on_run_clicked(self):
 
         model_name = self.lineEdit.text()
         predictors = self.textEdit.toPlainText().strip().split()
@@ -248,7 +246,7 @@ class Mine_App(QWidget, Ui_Form):
         downsampling = self.lineEdit_4.text()
 
         with importlib.resources.path("neuro_mine.scripts", "neuromine_train.py") as script_path:
-            args = [sys.executable, str(script_path)]
+            args = [str(script_path)]
 
             if model_name:
                 args.extend(["--model_name", model_name])
@@ -287,9 +285,24 @@ class Mine_App(QWidget, Ui_Form):
             if downsampling:
                 args.extend(["--downsampling", downsampling])
 
-            subprocess.run(args)
+            self.pushButton.setEnabled(False)
+            print("#### RUN STARTED ####")
+            self.p = QProcess()
+            self.p.finished.connect(self.process_finished)
+            self.p.readyReadStandardOutput.connect(self.handle_command_line_update)
+            self.p.start(sys.executable, args)
 
-        QApplication.quit()
+    def process_finished(self):
+        print("#### RUN ENDED ####")
+        self.p = None
+        self.update_button_states()
+
+    def handle_command_line_update(self):
+        data = self.p.readAllStandardOutput()
+        self.message(bytes(data).decode("utf-8"))
+
+    def message(self, s):
+        print(s)
 
 def run_ui():
     app = QApplication(sys.argv)
