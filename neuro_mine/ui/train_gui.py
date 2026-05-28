@@ -89,6 +89,11 @@ class Mine_App(QWidget, Ui_Form):
 
         self.update_button_states()
 
+    def closeEvent(self, event):
+        if self.p is not None:
+            self.p.close()
+        event.accept()
+
     def populate_presets(self):
         for attr, value in default_options["line_edits"].items():
             widget = getattr(self, attr, None)

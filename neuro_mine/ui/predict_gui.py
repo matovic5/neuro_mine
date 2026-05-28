@@ -43,6 +43,11 @@ class Predict_App(QWidget, Ui_Widget):
 
         self.update_button_states()
 
+    def closeEvent(self, event):
+        if self.p is not None:
+            self.p.close()
+        event.accept()
+
     def handle_json_browse(self, target_lineedit):
         file_path, _ = QFileDialog.getOpenFileName(self, "Select JSON File", "", "JSON Files (*.json)",
         options = QFileDialog.DontUseNativeDialog
