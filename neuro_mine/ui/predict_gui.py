@@ -108,6 +108,7 @@ class Predict_App(QWidget, Ui_Widget):
             self.p = QProcess()
             self.p.finished.connect(self.process_finished)
             self.p.readyReadStandardOutput.connect(self.handle_command_line_update)
+            self.p.readyReadStandardError.connect(self.handle_command_line_error)
             self.p.start(sys.executable, args)
 
     def process_finished(self):
@@ -119,8 +120,15 @@ class Predict_App(QWidget, Ui_Widget):
         data = self.p.readAllStandardOutput()
         self.message(bytes(data).decode("utf-8"))
 
-    def message(self, s):
-        print(s)
+    def handle_command_line_error(self):
+        data = self.p.readAllStandardError()
+        self.message(bytes(data).decode("utf-8"), True)
+
+    def message(self, s, error=False):
+        if error:
+            print('\033[31m' + s + '\033[0m')
+        else:
+            print(s)
 
 def run_ui():
     app = QApplication(sys.argv)

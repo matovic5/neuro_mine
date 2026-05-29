@@ -11,6 +11,8 @@ import os
 from neuro_mine.lib.options import default_options
 import sys
 
+os.system('color')
+
 class Mine_App(QWidget, Ui_Form):
     def __init__(self):
         super().__init__()
@@ -295,6 +297,7 @@ class Mine_App(QWidget, Ui_Form):
             self.p = QProcess()
             self.p.finished.connect(self.process_finished)
             self.p.readyReadStandardOutput.connect(self.handle_command_line_update)
+            self.p.readyReadStandardError.connect(self.handle_command_line_error)
             self.p.start(sys.executable, args)
 
     def process_finished(self):
@@ -306,8 +309,15 @@ class Mine_App(QWidget, Ui_Form):
         data = self.p.readAllStandardOutput()
         self.message(bytes(data).decode("utf-8"))
 
-    def message(self, s):
-        print(s)
+    def handle_command_line_error(self):
+        data = self.p.readAllStandardError()
+        self.message(bytes(data).decode("utf-8"), True)
+
+    def message(self, s, error=False):
+        if error:
+            print('\033[31m' + s + '\033[0m')
+        else:
+            print(s)
 
 def run_ui():
     app = QApplication(sys.argv)
