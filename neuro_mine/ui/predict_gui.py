@@ -1,15 +1,18 @@
 import importlib.resources
 import json
 from PySide6.QtWidgets import QApplication, QWidget, QLineEdit, QMessageBox, QFileDialog
+from PySide6.QtCore import QProcess
 from neuro_mine.ui.mine_predict import Ui_Widget
 import neuro_mine.ui.ui_utilities as uu
-import subprocess
 import sys
 
 class Predict_App(QWidget, Ui_Widget):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+
+        # process for running command line program
+        self.p = None
 
         self.lineEdit.setFocus()
 
@@ -39,6 +42,11 @@ class Predict_App(QWidget, Ui_Widget):
         self.lineEdit_6.textChanged.connect(self.update_button_states) # test threshold cutoff
 
         self.update_button_states()
+
+    def closeEvent(self, event):
+        if self.p is not None:
+            self.p.close()
+        event.accept()
 
     def handle_json_browse(self, target_lineedit):
         file_path, _ = QFileDialog.getOpenFileName(self, "Select JSON File", "", "JSON Files (*.json)",
@@ -70,7 +78,7 @@ class Predict_App(QWidget, Ui_Widget):
 
         text_filled = bool(self.textEdit.toPlainText().strip())
 
-        self.pushButton_5.setEnabled(all_valid and line_edits_filled and text_filled)
+        self.pushButton_5.setEnabled(all_valid and line_edits_filled and text_filled and (self.p is None))
 
     def on_run_clicked(self):
 
@@ -81,7 +89,7 @@ class Predict_App(QWidget, Ui_Widget):
         th_test = self.lineEdit_6.text()
 
         with importlib.resources.path("neuro_mine.scripts", "neuromine_prediction.py") as script_path:
-            args = [sys.executable, str(script_path)]
+            args = [str(script_path)]
 
             if predictors:
                 args.append("--predictors")
@@ -95,9 +103,32 @@ class Predict_App(QWidget, Ui_Widget):
             if th_test:
                 args.extend(["--th_test", th_test])
 
-            subprocess.run(args)
+            self.pushButton_5.setEnabled(False)
+            print("#### RUN STARTED ####")
+            self.p = QProcess()
+            self.p.finished.connect(self.process_finished)
+            self.p.readyReadStandardOutput.connect(self.handle_command_line_update)
+            self.p.readyReadStandardError.connect(self.handle_command_line_error)
+            self.p.start(sys.executable, args)
 
-        QApplication.quit()
+    def process_finished(self):
+        print("#### RUN ENDED ####")
+        self.p = None
+        self.update_button_states()
+
+    def handle_command_line_update(self):
+        data = self.p.readAllStandardOutput()
+        self.message(bytes(data).decode("utf-8"))
+
+    def handle_command_line_error(self):
+        data = self.p.readAllStandardError()
+        self.message(bytes(data).decode("utf-8"), True)
+
+    def message(self, s, error=False):
+        if error:
+            print('\033[31m' + s + '\033[0m')
+        else:
+            print(s)
 
 def run_ui():
     app = QApplication(sys.argv)

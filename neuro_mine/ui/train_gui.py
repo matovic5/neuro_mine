@@ -3,13 +3,15 @@ import importlib.resources
 import json
 from PySide6.QtGui import QPalette, QColor, QIntValidator, QDoubleValidator
 from PySide6.QtWidgets import QApplication, QWidget, QFileDialog, QLineEdit, QCheckBox, QMessageBox
+from PySide6.QtCore import QProcess
 from neuro_mine.ui.mine_train import Ui_Form
 import neuro_mine.ui.ui_utilities as uu
 import numpy as np
 import os
 from neuro_mine.lib.options import default_options
-import subprocess
 import sys
+
+os.system('color')
 
 class Mine_App(QWidget, Ui_Form):
     def __init__(self):
@@ -17,6 +19,9 @@ class Mine_App(QWidget, Ui_Form):
         self.setupUi(self)
         self.lineEdit.setFocus()
         self.default_options = default_options
+
+        # process for running command line program
+        self.p = None
 
         now = datetime.datetime.now().strftime("%b%d%Y_%I%M%p")
         validator = QDoubleValidator(0.0, 1.0, 2 ,self)
@@ -85,6 +90,11 @@ class Mine_App(QWidget, Ui_Form):
         self.textEdit_2.textChanged.connect(self.update_button_states)
 
         self.update_button_states()
+
+    def closeEvent(self, event):
+        if self.p is not None:
+            self.p.close()
+        event.accept()
 
     def populate_presets(self):
         for attr, value in default_options["line_edits"].items():
@@ -177,7 +187,7 @@ class Mine_App(QWidget, Ui_Form):
         line2_filled = bool(self.textEdit_2.toPlainText().strip())
         required_fields_filled = line4_filled and line2_filled
 
-        self.pushButton.setEnabled(all_valid and required_fields_filled)
+        self.pushButton.setEnabled(all_valid and required_fields_filled and (self.p is None))
 
         self.pushButton_6.setEnabled(all_valid)
 
@@ -243,7 +253,7 @@ class Mine_App(QWidget, Ui_Form):
         downsampling = self.lineEdit_4.text()
 
         with importlib.resources.path("neuro_mine.scripts", "neuromine_train.py") as script_path:
-            args = [sys.executable, str(script_path)]
+            args = [str(script_path)]
 
             if model_name:
                 args.extend(["--model_name", model_name])
@@ -282,9 +292,32 @@ class Mine_App(QWidget, Ui_Form):
             if downsampling:
                 args.extend(["--downsampling", downsampling])
 
-            subprocess.run(args)
+            self.pushButton.setEnabled(False)
+            print("#### RUN STARTED ####")
+            self.p = QProcess()
+            self.p.finished.connect(self.process_finished)
+            self.p.readyReadStandardOutput.connect(self.handle_command_line_update)
+            self.p.readyReadStandardError.connect(self.handle_command_line_error)
+            self.p.start(sys.executable, args)
 
-        QApplication.quit()
+    def process_finished(self):
+        print("#### RUN ENDED ####")
+        self.p = None
+        self.update_button_states()
+
+    def handle_command_line_update(self):
+        data = self.p.readAllStandardOutput()
+        self.message(bytes(data).decode("utf-8"))
+
+    def handle_command_line_error(self):
+        data = self.p.readAllStandardError()
+        self.message(bytes(data).decode("utf-8"), True)
+
+    def message(self, s, error=False):
+        if error:
+            print('\033[31m' + s + '\033[0m')
+        else:
+            print(s)
 
 def run_ui():
     app = QApplication(sys.argv)
