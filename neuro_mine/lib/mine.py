@@ -156,6 +156,17 @@ class _Outputs:
 
 
 class MineWarning(Warning):
+    """
+    Class for MINE specific warnings
+    """
+    def __init__(self, message: str):
+        super().__init__(message)
+
+
+class MineException(Exception):
+    """
+    Class for MINE specific exceptions
+    """
     def __init__(self, message: str):
         super().__init__(message)
 

@@ -4,7 +4,7 @@ import logging
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
 from .lib.processing import generate_insights, barcode_cluster_plot
-from .lib.mine import Mine, BaseData, MineData, MineSpikingData, MineWarning
+from .lib.mine import Mine, BaseData, MineData, MineSpikingData, MineWarning, MineException
 from .lib.taylorDecomp import dca_dr, d2ca_dr2, taylor_predict, taylor_decompose, data_mean_prediction, complexity_scores
 from .lib.model import ActivityPredictor, train_model, get_standard_model
 from .lib.utilities import (create_overwrite, modelweights_to_hdf5, modelweights_from_hdf5, bootstrap, safe_standardize,
@@ -39,4 +39,5 @@ __all__ = ["Data",
            "BaseData",
            "MineData",
            "MineSpikingData",
-           "MineWarning"]
+           "MineWarning",
+           "MineException"]
