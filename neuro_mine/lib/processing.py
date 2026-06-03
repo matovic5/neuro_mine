@@ -7,10 +7,10 @@ import h5py
 from neuro_mine.lib import file_handling as fh
 import json
 from neuro_mine.lib.utilities import safe_standardize, interp_events, safe_standardize_episodic
-from neuro_mine.lib.mine import Mine, MineData, MineSpikingData
+from neuro_mine.lib.mine import Mine, MineData, MineSpikingData, MineException, MineWarning
 import upsetplot as ups
 import matplotlib.pyplot as pl
-from warnings import filterwarnings
+from warnings import filterwarnings, warn
 import psutil
 
 
@@ -323,18 +323,30 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
     if not is_episodic:
         ip_pred_data, ip_resp_data, ip_time = joint_interpolation(pred_data, resp_data, pred_data[:, 0],
                                                                   resp_data[:, 0], is_spike_data)
+        if ip_time.size < 2:
+            raise MineException("There are less than two timepoints in the data. No model can be fit.")
         if downsampling > 1:
             ip_pred_data = downsample_mat_with_time(ip_pred_data, downsampling, is_spike_data)
             ip_resp_data = downsample_mat_with_time(ip_resp_data, downsampling, is_spike_data)
             ip_time = ip_pred_data[:, 0]
+            if ip_time.size < 2:
+                raise MineException("The current downsampling factor reduces the data to less than two timepoints."
+                                    " Reduce downsampling")
     else:
         ip_pred_data, ip_resp_data, ip_time = episodic_interpolation(pred_data_list, resp_data_list,
                                                                      [pda[:, 0] for pda in pred_data_list],
                                                                      [rda[:, 0] for rda in resp_data_list], is_spike_data)
+        for epix in range(len(ip_time)):
+            if ip_time[epix].size < 2:
+                raise MineException(f"There are less than two timepoints in episode {epix}")
         if downsampling > 1:
             ip_pred_data = downsample_mat_list(ip_pred_data, downsampling, is_spike_data)
             ip_resp_data = downsample_mat_list(ip_resp_data, downsampling, is_spike_data)
             ip_time = [ipd[:, 0] for ipd in ip_pred_data]
+            for epix in range(len(ip_time)):
+                if ip_time[epix].size < 2:
+                    raise MineException(f"The current downsampling factor reduces the data to less than two timepoints"
+                                        f" in episode {epix}. Reduce downsampling")
 
     output_file_name = path.splitext(path.split(resp_path[0])[-1])[0]
     # Save interpolated data with chosen column names if verbose flag is set - currently not for episodic data
@@ -395,6 +407,13 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
     model_history = int(np.round(history_time * ip_rate, 0))
     if model_history < 1:
         model_history = 1
+
+    if not is_episodic:
+        if ip_time.size - model_history < 10:
+            warn("There are less than 10 datapoints available for training. Training will likely fail.")
+    else:
+        if sum([ipt.size for ipt in ip_time]) - model_history < 10:
+            warn("There are less than 10 datapoints available for training. Training will likely fail.")
 
     configuration["run"]["model_history_frames"] = model_history
     # Save configuration to file
@@ -571,16 +590,19 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
         fig.savefig(path.join(output_folder, f"MINE_{output_file_name}_LinearityMetrics.pdf"))
 
         # perform barcode clustering
-        fig, df_barcode = barcode_cluster_plot(interpret_df[interpret_df["Fit"] == "Y"], predictor_columns)
-        fig.savefig(path.join(output_folder, f"MINE_{output_file_name}_BarcodeUpsetPlot.pdf"))
+        try:
+            fig, df_barcode = barcode_cluster_plot(interpret_df[interpret_df["Fit"] == "Y"], predictor_columns)
+            fig.savefig(path.join(output_folder, f"MINE_{output_file_name}_BarcodeUpsetPlot.pdf"))
 
-        # augment insights with barcodes and save
-        barcode_cluster_numbers = np.full(interpret_df.shape[0], -1, dtype=int)
-        fit_ix = np.arange(interpret_df.shape[0]).astype(int)[interpret_df["Fit"] == "Y"]
-        for i, fix in enumerate(fit_ix):
-            barcode = np.array(df_barcode.iloc[i]).astype(int)
-            barcode_cluster_numbers[fix] = sum([bc*(2**j) for j, bc in enumerate(barcode)])
-        interpret_df.insert(interpret_df.shape[1], "Barcode cluster", barcode_cluster_numbers)
+            # augment insights with barcodes and save
+            barcode_cluster_numbers = np.full(interpret_df.shape[0], -1, dtype=int)
+            fit_ix = np.arange(interpret_df.shape[0]).astype(int)[interpret_df["Fit"] == "Y"]
+            for i, fix in enumerate(fit_ix):
+                barcode = np.array(df_barcode.iloc[i]).astype(int)
+                barcode_cluster_numbers[fix] = sum([bc*(2**j) for j, bc in enumerate(barcode)])
+            interpret_df.insert(interpret_df.shape[1], "Barcode cluster", barcode_cluster_numbers)
+        except AttributeError:
+            warn("Did not generate barcode upset plot. Not enough fit groups.", MineWarning)
         interpret_df.to_csv(path.join(output_folder, interpret_name), index=False)
 
 
