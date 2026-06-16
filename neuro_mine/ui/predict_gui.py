@@ -126,7 +126,7 @@ class Predict_App(QWidget, Ui_Widget):
 
     def message(self, s, error=False):
         if error:
-            print('\033[31m' + s + '\033[0m')
+            print('\033[91m' + s + '\033[0m')
         else:
             print(s)
 
