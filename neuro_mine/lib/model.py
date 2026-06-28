@@ -5,12 +5,15 @@ import numpy as np
 import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 import tensorflow as tf
+
 tf.get_logger().setLevel("ERROR")
 import tensorflow.keras as keras
 from tensorflow.keras import layers, regularizers, initializers
 from typing import Optional, Union
 import warnings
+
 warnings.filterwarnings("ignore", category=FutureWarning)
+
 
 class NotInitialized(Exception):
     def __init__(self, message):
@@ -76,38 +79,40 @@ class ActivityPredictor(keras.Model):
         Initializes the model, resetting weights
         """
         # processing
-        self._conv_layer = layers.Conv1D(filters=self.n_conv,
-                                         kernel_size=self.input_length,
-                                         # set kernel size = input size => computes dot product
-                                         use_bias=True,
-                                         padding='valid',
-                                         activation=self.activation,
-                                         kernel_initializer=initializers.GlorotUniform(),
-                                         kernel_regularizer=regularizers.l2(self.l2_sparsity),
-                                         strides=1, name="Convolution")
         self._flatten = layers.Flatten()
+
+        # Replace the Conv1D with a Dense layer.
+        # Since kernel_size == input_length, this computes the exact same weights and math, but much faster.
+        self._conv_layer = layers.Dense(units=self.n_conv,
+                                        activation=self.activation,
+                                        use_bias=True,
+                                        kernel_initializer=initializers.GlorotUniform(),
+                                        kernel_regularizer=regularizers.L2(self.l2_sparsity),
+                                        name="PseudoConvolution")
         self._drop_cl = layers.Dropout(self.drop_rate)
         self._deep_1 = layers.Dense(units=self.n_units, activation=self.activation,
                                     kernel_initializer=initializers.GlorotUniform(),
-                                    kernel_regularizer=regularizers.l2(self.l2_sparsity), name="Deep1")
+                                    kernel_regularizer=regularizers.L2(self.l2_sparsity), name="Deep1")
         self._drop_d1 = layers.Dropout(self.drop_rate)
         self._deep_2 = layers.Dense(units=self.n_units, activation=self.activation,
                                     kernel_initializer=initializers.GlorotUniform(),
-                                    kernel_regularizer=regularizers.l2(self.l2_sparsity), name="Deep2")
+                                    kernel_regularizer=regularizers.L2(self.l2_sparsity), name="Deep2")
         self._drop_d2 = layers.Dropout(self.drop_rate)
 
         self._deep_3 = layers.Dense(units=self.n_units, activation=self.activation,
                                     kernel_initializer=initializers.GlorotUniform(),
-                                    kernel_regularizer=regularizers.l2(self.l2_sparsity), name="Deep3")
+                                    kernel_regularizer=regularizers.L2(self.l2_sparsity), name="Deep3")
         self._drop_d3 = layers.Dropout(self.drop_rate)
         self._deep_4 = layers.Dense(units=self.n_units, activation=self.activation,
                                     kernel_initializer=initializers.GlorotUniform(),
-                                    kernel_regularizer=regularizers.l2(self.l2_sparsity), name="Deep4")
+                                    kernel_regularizer=regularizers.L2(self.l2_sparsity), name="Deep4")
         self._drop_d4 = layers.Dropout(self.drop_rate)
         # output: This is just one value, that should predict the calcium response at the current time
         self._out = layers.Dense(1, activation=None, name="Out")
-        # create our optimizer and loss functions
-        self.optimizer = keras.optimizers.legacy.Adam(self.learning_rate)
+
+        # UPDATED: Replaced legacy Adam optimizer with standard Keras 3 Adam optimizer
+        self.optimizer = keras.optimizers.Adam(learning_rate=self.learning_rate)
+
         # all we need to do to be able to predict spikes is change our loss function! This change is transparent
         if self.predict_spikes:
             self.loss_fn = keras.losses.BinaryCrossentropy(from_logits=True)
@@ -115,26 +120,47 @@ class ActivityPredictor(keras.Model):
             self.loss_fn = keras.losses.MeanSquaredError()
         self._initialized = True
 
-    def get_output(self, inputs: np.ndarray) -> float:
+    # def get_output(self, inputs: np.ndarray) -> float:
+    #     """
+    #     Returns the output value given the model inputs
+    #     :param inputs: batchsize x input_length x n_regressors (the channels)
+    #     :return: 1 output value corresponding to the calcium response
+    #     """
+    #     self.check_input(inputs)
+    #     out = self(inputs)
+    #     return out.numpy().ravel()
+    #
+    # def get_probability(self, inputs: np.ndarray) -> float:
+    #     """
+    #     Returns the spike probability given model inputs
+    #     :param inputs: batchsize x input_length x n_regressors (the channels)
+    #     :return: 1 output value corresponding to the spike probability
+    #     """
+    #     if not self.predict_spikes:
+    #         raise ValueError("Model does not predict spikes. Probability representation is meaningless")
+    #     self.check_input(inputs)
+    #     logit_out = self(inputs)
+    #     return tf.math.sigmoid(logit_out).numpy().ravel()
+
+    def get_output(self, inputs: np.ndarray) -> np.ndarray:
         """
         Returns the output value given the model inputs
-        :param inputs: batchsize x input_length x n_regressors (the channels)
-        :return: 1 output value corresponding to the calcium response
         """
         self.check_input(inputs)
-        out = self(inputs)
+        # Use the compiled graph instead of eager execution
+        out = self.fast_predict(inputs)
         return out.numpy().ravel()
 
-    def get_probability(self, inputs: np.ndarray) -> float:
+    def get_probability(self, inputs: np.ndarray) -> np.ndarray:
         """
         Returns the spike probability given model inputs
-        :param inputs: batchsize x input_length x n_regressors (the channels)
-        :return: 1 output value corresponding to the spike probability
         """
         if not self.predict_spikes:
             raise ValueError("Model does not predict spikes. Probability representation is meaningless")
         self.check_input(inputs)
-        logit_out = self(inputs)
+
+        # Use the compiled graph
+        logit_out = self.fast_predict(inputs)
         return tf.math.sigmoid(logit_out).numpy().ravel()
 
     def clear_model(self) -> None:
@@ -163,13 +189,12 @@ class ActivityPredictor(keras.Model):
         if inputs.shape[1] != self.input_length:
             raise ValueError("Input length across time different than expected")
 
-    @tf.function
     def call(self, inputs: Union[np.ndarray, tf.Tensor], training: Optional[bool] = None, mask=None) -> tf.Tensor:
         if training is None:
             training = False
         self.check_init()
-        inputs = self._conv_layer(inputs, training=training)
         inputs = self._flatten(inputs)
+        inputs = self._conv_layer(inputs, training=training)
         inputs = self._drop_cl(inputs, training=training)
         inputs = self._deep_1(inputs, training=training)
         inputs = self._drop_d1(inputs, training=training)
@@ -180,25 +205,38 @@ class ActivityPredictor(keras.Model):
         inputs = self._drop_d3(inputs, training=training)
         inputs = self._deep_4(inputs, training=training)
         inputs = self._drop_d4(inputs, training=training)
-        return self._out(inputs)
+
+        # Get the (BatchSize, 1) prediction from the final dense layer
+        out = self._out(inputs)
+
+        # 2. Squeeze the last axis to output (BatchSize,)
+        # This perfectly aligns with your dataset labels and prevents Keras 3 shape broadcasting bugs
+        return tf.squeeze(out, axis=-1)
+
+    @tf.function(jit_compile=True)  # jit_compile=True enables massive XLA speedups for inference
+    def fast_predict(self, inputs: tf.Tensor) -> tf.Tensor:
+        """
+        A compiled, highly optimized forward pass specifically for
+        use outside the training loop.
+        """
+        # Call the base model with training=False to disable Dropout
+        return self(inputs, training=False)
 
     @tf.function
-    def train_step(self, btch_inputs: Union[np.ndarray, tf.Tensor], btch_labels: Union[np.ndarray, tf.Tensor]):
-        """
-        Runs one training step on the model
-        :param btch_inputs: The inputs of the batch
-        :param btch_labels: True values of the calcium response
-        """
+    def perform_training_step(self, btch_inputs: tf.Tensor, btch_labels: tf.Tensor):
         with tf.GradientTape() as tape:
             pred = self(btch_inputs, training=True)
+
             loss = self.loss_fn(btch_labels, pred)
-            # add any extra losses created during foward pass
-            # NOTE: I'm not entirely clear if this is really required when the only extra losses
-            # are kernel regularizations, however the values match the absolute weights exactly
-            # i.e. they are the L1 loss
-            loss += sum(self.losses)
-        gradients = tape.gradient(loss, self.trainable_variables)
-        self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+            # Handle Keras 3 regularization tracking safely
+            if self.losses:
+                loss += tf.math.add_n(self.losses)
+
+        # Keras 3 standard property is trainable_weights
+        trainable_vars = self.trainable_weights
+        gradients = tape.gradient(loss, trainable_vars)
+        self.optimizer.apply_gradients(zip(gradients, trainable_vars))
+        return loss
 
     @property
     def activation(self) -> str:
@@ -244,20 +282,18 @@ class ActivityPredictor(keras.Model):
     def out(self) -> Optional[keras.layers.Layer]:
         return self._out
 
-
 def train_model(mdl: ActivityPredictor, tset: tf.data.Dataset, n_epochs: int, datacount: int) -> None:
-    """
-    Trains the model over n epochs. NOTE: The dataset passed should be generated from a shuffle with
-    reshuffle_each_iteration set to true to ensure that data is presented in shuffled order in each
-    training epoch
-    :param mdl: The model to train
-    :param tset: The dataset with training data
-    :param n_epochs: The number of epochs to train for
-    :param datacount: Unused
-    """
+    # Trigger weight initialization by fetching one batch and doing a dry run
+    for dummy_inp, _ in tset.take(1):
+        mdl(dummy_inp, training=False)
+
+    # CRITICAL FIX: Build the Keras 3 optimizer variables before tracing the custom loop
+    mdl.optimizer.build(mdl.trainable_variables)
+
+    # Now execute the custom loop safely
     for e in range(n_epochs):
         for inp, outp in tset:
-            mdl.train_step(inp, outp)
+            mdl.perform_training_step(inp, outp)
 
 
 def get_standard_model(hist_steps: int, predict_spikes: bool) -> ActivityPredictor:

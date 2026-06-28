@@ -333,7 +333,7 @@ class EpisodicData:
             else:
                 dset = dset.concatenate(data.training_data(sample_ix, batch_size))
         dset.shuffle(_shuffle_buffer_size, reshuffle_each_iteration=True).batch(batch_size, drop_remainder=True)
-        return dset.prefetch(tf.data.AUTOTUNE)
+        return dset.cache().prefetch(buffer_size=tf.data.AUTOTUNE)
 
     def test_data(self, sample_ix: int, batch_size=32):
         """
@@ -353,7 +353,7 @@ class EpisodicData:
             else:
                 dset = dset.concatenate(data.training_data(sample_ix, batch_size))
         dset.shuffle(_shuffle_buffer_size, reshuffle_each_iteration=True).batch(batch_size, drop_remainder=True)
-        return dset.prefetch(tf.data.AUTOTUNE)
+        return dset.cache().prefetch(buffer_size=tf.data.AUTOTUNE)
 
     def regressor_matrices(self, sample_ix: int) -> List[np.ndarray]:
         """
@@ -435,7 +435,7 @@ class Data:
                 in_data[t-self.input_steps+1, :, i] = this_reg[0, t-self.input_steps+1:t+1]
         train_ds = tf.data.Dataset.from_tensor_slices((in_data, out_data)).\
             shuffle(_shuffle_buffer_size, reshuffle_each_iteration=True).batch(batch_size, drop_remainder=True)
-        return train_ds.prefetch(tf.data.AUTOTUNE)
+        return train_ds.cache().prefetch(buffer_size=tf.data.AUTOTUNE)
 
     def test_data(self, sample_ix: int, batch_size=32):
         """
@@ -457,7 +457,7 @@ class Data:
                 t_t = t + self.tsteps_for_train
                 in_data[t-self.input_steps+1, :, i] = this_reg[0, t_t-self.input_steps+1:t_t+1]
         test_ds = tf.data.Dataset.from_tensor_slices((in_data, out_data)).batch(batch_size, drop_remainder=False)
-        return test_ds.prefetch(tf.data.AUTOTUNE)
+        return test_ds.cache().prefetch(buffer_size=tf.data.AUTOTUNE)
 
     def regressor_matrix(self, sample_ix: int) -> np.ndarray:
         """
