@@ -315,7 +315,7 @@ class Mine_App(QWidget, Ui_Form):
 
     def message(self, s, error=False):
         if error:
-            print('\033[31m' + s + '\033[0m')
+            print('\033[91m' + s + '\033[0m')
         else:
             print(s)
 
