@@ -120,28 +120,6 @@ class ActivityPredictor(keras.Model):
             self.loss_fn = keras.losses.MeanSquaredError()
         self._initialized = True
 
-    # def get_output(self, inputs: np.ndarray) -> float:
-    #     """
-    #     Returns the output value given the model inputs
-    #     :param inputs: batchsize x input_length x n_regressors (the channels)
-    #     :return: 1 output value corresponding to the calcium response
-    #     """
-    #     self.check_input(inputs)
-    #     out = self(inputs)
-    #     return out.numpy().ravel()
-    #
-    # def get_probability(self, inputs: np.ndarray) -> float:
-    #     """
-    #     Returns the spike probability given model inputs
-    #     :param inputs: batchsize x input_length x n_regressors (the channels)
-    #     :return: 1 output value corresponding to the spike probability
-    #     """
-    #     if not self.predict_spikes:
-    #         raise ValueError("Model does not predict spikes. Probability representation is meaningless")
-    #     self.check_input(inputs)
-    #     logit_out = self(inputs)
-    #     return tf.math.sigmoid(logit_out).numpy().ravel()
-
     def get_output(self, inputs: np.ndarray) -> np.ndarray:
         """
         Returns the output value given the model inputs
@@ -213,7 +191,7 @@ class ActivityPredictor(keras.Model):
         # This perfectly aligns with your dataset labels and prevents Keras 3 shape broadcasting bugs
         return tf.squeeze(out, axis=-1)
 
-    @tf.function(jit_compile=True)  # jit_compile=True enables massive XLA speedups for inference
+    @tf.function(jit_compile=True)  # jit_compile=True enables XLA speedups for inference
     def fast_predict(self, inputs: tf.Tensor) -> tf.Tensor:
         """
         A compiled, highly optimized forward pass specifically for
