@@ -216,17 +216,25 @@ def rearrange_hessian(hessian: np.ndarray, npreds: int, inp_length: int) -> np.n
     return hessian_r
 
 
-def simulate_response(act_predictor, predictors: np.ndarray) -> np.ndarray:
+def simulate_response(act_predictor, predictors: np.ndarray, chunk_size=256) -> np.ndarray:
     """
     Simulate the predicted response of a neuron to an arbitrary input
     :param act_predictor: The model used to predict the response
     :param predictors: n_time x m_predictors matrix of predictor inputs
+    :param chunk_size: Predictions will be performed in chunks of size chunk_size x input_length x m_predictors
     :return: n_time - history_length + 1 long vector of predicted neural responses
     """
-    history = act_predictor.input_length
-    pred = [act_predictor.get_output(predictors[None, t - history + 1:t + 1, :]) for t in
-            range(history - 1, predictors.shape[0])]
-    return np.hstack(pred)
+    h = act_predictor.input_length
+    chunk_starts = np.arange(h -1, predictors.shape[0], chunk_size).astype(int)
+    chunk_ends = chunk_starts + chunk_size
+    if chunk_ends[-1] > predictors.shape[0]:
+        chunk_ends[-1] = predictors.shape[0]
+    prediction = []
+    for cs, ce in zip(chunk_starts, chunk_ends):
+        overlapped_predictors = np.vstack(
+            [predictors[None, t - h + 1:t + 1, :] for t in range(cs, ce)])
+        prediction.append(act_predictor.get_output(overlapped_predictors))
+    return np.hstack(prediction)
 
 
 def modified_gram_schmidt(col_mat: np.ndarray) -> np.ndarray:
@@ -333,7 +341,7 @@ class EpisodicData:
             else:
                 dset = dset.concatenate(data.training_data(sample_ix, batch_size))
         dset.shuffle(_shuffle_buffer_size, reshuffle_each_iteration=True).batch(batch_size, drop_remainder=True)
-        return dset.prefetch(tf.data.AUTOTUNE)
+        return dset.cache().prefetch(buffer_size=tf.data.AUTOTUNE)
 
     def test_data(self, sample_ix: int, batch_size=32):
         """
@@ -353,7 +361,7 @@ class EpisodicData:
             else:
                 dset = dset.concatenate(data.training_data(sample_ix, batch_size))
         dset.shuffle(_shuffle_buffer_size, reshuffle_each_iteration=True).batch(batch_size, drop_remainder=True)
-        return dset.prefetch(tf.data.AUTOTUNE)
+        return dset.cache().prefetch(buffer_size=tf.data.AUTOTUNE)
 
     def regressor_matrices(self, sample_ix: int) -> List[np.ndarray]:
         """
@@ -435,7 +443,7 @@ class Data:
                 in_data[t-self.input_steps+1, :, i] = this_reg[0, t-self.input_steps+1:t+1]
         train_ds = tf.data.Dataset.from_tensor_slices((in_data, out_data)).\
             shuffle(_shuffle_buffer_size, reshuffle_each_iteration=True).batch(batch_size, drop_remainder=True)
-        return train_ds.prefetch(tf.data.AUTOTUNE)
+        return train_ds.cache().prefetch(buffer_size=tf.data.AUTOTUNE)
 
     def test_data(self, sample_ix: int, batch_size=32):
         """
@@ -457,7 +465,7 @@ class Data:
                 t_t = t + self.tsteps_for_train
                 in_data[t-self.input_steps+1, :, i] = this_reg[0, t_t-self.input_steps+1:t_t+1]
         test_ds = tf.data.Dataset.from_tensor_slices((in_data, out_data)).batch(batch_size, drop_remainder=False)
-        return test_ds.prefetch(tf.data.AUTOTUNE)
+        return test_ds.cache().prefetch(buffer_size=tf.data.AUTOTUNE)
 
     def regressor_matrix(self, sample_ix: int) -> np.ndarray:
         """
