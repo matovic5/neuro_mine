@@ -474,6 +474,7 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
 
     # rotate mine_resp on user request and re-fit without computing any Taylor just to get test correlations
     if run_shuffle:
+        print("#### RUNNING PERMUTED CONTROL DATA (SHUFFLES) ####", flush=True)
         if not is_episodic:
             mine_resp_shuff = np.roll(mine_resp, mine_resp.shape[1] // 2, axis=1)
         else:
