@@ -602,7 +602,7 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
             interpret_df.insert(interpret_df.shape[1], "Barcode cluster", barcode_cluster_numbers)
         except AttributeError:
             warn("Did not generate barcode upset plot. Not enough fit groups.", MineWarning)
-        interpret_df.to_csv(path.join(output_folder, interpret_name), index=False)
+    interpret_df.to_csv(path.join(output_folder, interpret_name), index=False)
 
 
 if __name__ == '__main__':
