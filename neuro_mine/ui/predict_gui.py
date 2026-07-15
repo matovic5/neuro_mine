@@ -127,7 +127,10 @@ class Predict_App(QWidget, Ui_Widget):
         data = self.p.readAllStandardError()
         self.message(bytes(data).decode("utf-8"), True)
 
-    def message(self, s, error=False):
+    @staticmethod
+    def message(s, error=False):
+        if "WARNING: All log messages" in s:
+            return
         if error:
             print('\033[91m' + s + '\033[0m')
         else:
