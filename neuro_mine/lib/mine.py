@@ -336,7 +336,7 @@ class Mine:
             # that made the cut - the user will have to handle those cases
             if c_ts < self.score_cut or not np.isfinite(c_ts):
                 if self.verbose:
-                    print(f"        Unit {cell_ix+1} out of {n_responses} fit. "
+                    print(f"        Unit {cell_ix+1} out of {n_responses} completed. "
                           f"Test score={outs.scores_test[cell_ix]} which was below cut-off.", flush=True)
                 continue
             # compute first and second order derivatives
@@ -493,7 +493,7 @@ class Mine:
             # that made the cut - the user will have to handle those cases
             if c_ts < self.score_cut or not np.isfinite(c_ts):
                 if self.verbose:
-                    print(f"        Unit {cell_ix+1} out of {n_responses} fit. "
+                    print(f"        Unit {cell_ix+1} out of {n_responses} completed. "
                           f"Test score={outs.scores_test[cell_ix]} which was below cut-off.", flush=True)
                 continue
             # compute first and second order derivatives
