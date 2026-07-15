@@ -10,8 +10,9 @@ from neuro_mine.lib.utilities import safe_standardize, interp_events, safe_stand
 from neuro_mine.lib.mine import Mine, MineData, MineSpikingData, MineException, MineWarning
 from.upsetplot import UpSet, from_indicators
 import matplotlib.pyplot as pl
-from warnings import filterwarnings, warn
+from warnings import warn
 import psutil
+import datetime
 
 
 def downsample_data(in_data: np.ndarray, in_time: np.ndarray,
@@ -249,6 +250,8 @@ def barcode_cluster_plot(insight_df: pd.DataFrame, predictor_names: List[str]) -
 
 
 def process_paired_files(resp_path: List[str], pred_path: List[str], configuration: Dict):
+    start_time = datetime.datetime.now()
+
     your_model = configuration["run"]["model_name"]
     run_shuffle = configuration["config"]["run_shuffle"]
     time_as_pred = configuration["config"]["use_time"]
@@ -603,6 +606,9 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
         except AttributeError:
             warn("Did not generate barcode upset plot. Not enough fit groups.", MineWarning)
     interpret_df.to_csv(path.join(output_folder, interpret_name), index=False)
+    end_time = datetime.datetime.now()
+    elapsed = end_time - start_time
+    print(f"#### Analysis completed in {elapsed}. ####", flush=True)
 
 
 if __name__ == '__main__':
