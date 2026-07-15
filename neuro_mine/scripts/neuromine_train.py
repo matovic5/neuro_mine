@@ -7,6 +7,7 @@ import os
 from os import path
 import neuro_mine.lib.file_handling as fh
 from neuro_mine.lib.options import default_options
+from pathvalidate import sanitize_filename
 
 class MineException(Exception):
     def __init__(self, message):
@@ -118,6 +119,9 @@ if __name__ == '__main__':
         your_model = datetime.now().strftime("%B_%d_%Y_%I_%M%p")
     else:
         your_model = args.model_name
+
+    # Restrict your_model to be a valid path name
+    your_model = sanitize_filename(your_model, replacement_text='_')
 
     if not is_episodic:
         for i, pair in enumerate(file_pairs):
