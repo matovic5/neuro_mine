@@ -5,6 +5,9 @@ from PySide6.QtCore import QProcess
 from neuro_mine.ui.mine_predict import Ui_Widget
 import neuro_mine.ui.ui_utilities as uu
 import sys
+import os
+
+os.system('color')
 
 class Predict_App(QWidget, Ui_Widget):
     def __init__(self):
