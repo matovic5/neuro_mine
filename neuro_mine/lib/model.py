@@ -3,6 +3,8 @@ Module for all network models with tensorflow dependency
 """
 import numpy as np
 import os
+os.environ["GRPC_VERBOSITY"] = "ERROR"
+os.environ["GLOG_minloglevel"] = "2"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 import tensorflow as tf
 

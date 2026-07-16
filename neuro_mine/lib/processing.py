@@ -8,10 +8,11 @@ from neuro_mine.lib import file_handling as fh
 import json
 from neuro_mine.lib.utilities import safe_standardize, interp_events, safe_standardize_episodic
 from neuro_mine.lib.mine import Mine, MineData, MineSpikingData, MineException, MineWarning
-import upsetplot as ups
+from.upsetplot import UpSet, from_indicators
 import matplotlib.pyplot as pl
-from warnings import filterwarnings, warn
+from warnings import warn
 import psutil
+import datetime
 
 
 def downsample_data(in_data: np.ndarray, in_time: np.ndarray,
@@ -235,15 +236,13 @@ def generate_insights(mdata: Union[MineData, MineSpikingData], is_spike_data: bo
 
 
 def barcode_cluster_plot(insight_df: pd.DataFrame, predictor_names: List[str]) -> Tuple[pl.Figure, pd.DataFrame]:
-    # suppress warning about pandas 3.0 compatibility which is violated by upsetplot
-    filterwarnings("ignore", category=FutureWarning)
     barcode_labels = [ph for ph in predictor_names] + ["Nonlinear"]
     barcode = np.hstack([(np.array(insight_df[ph]) == "Y")[:, None] for ph in predictor_names])
     barcode = np.c_[barcode, (np.array(insight_df["Linearity"]) != "linear")[:, None]]
     df_barcode = pd.DataFrame(barcode, columns=barcode_labels)
-    aggregate = ups.from_indicators(df_barcode)
+    aggregate = from_indicators(df_barcode)
     fig = pl.figure()
-    up_set = ups.UpSet(aggregate, subset_size='count', min_subset_size=1, facecolor="C1", sort_by='cardinality',
+    up_set = UpSet(aggregate, subset_size='count', min_subset_size=1, facecolor="C1", sort_by='cardinality',
                        sort_categories_by=None)
     axes_dict = up_set.plot(fig)
     axes_dict['intersections'].set_yscale('log')
@@ -251,6 +250,8 @@ def barcode_cluster_plot(insight_df: pd.DataFrame, predictor_names: List[str]) -
 
 
 def process_paired_files(resp_path: List[str], pred_path: List[str], configuration: Dict):
+    start_time = datetime.datetime.now()
+
     your_model = configuration["run"]["model_name"]
     run_shuffle = configuration["config"]["run_shuffle"]
     time_as_pred = configuration["config"]["use_time"]
@@ -476,6 +477,7 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
 
     # rotate mine_resp on user request and re-fit without computing any Taylor just to get test correlations
     if run_shuffle:
+        print("#### RUNNING PERMUTED CONTROL DATA (SHUFFLES) ####", flush=True)
         if not is_episodic:
             mine_resp_shuff = np.roll(mine_resp, mine_resp.shape[1] // 2, axis=1)
         else:
@@ -603,7 +605,10 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
             interpret_df.insert(interpret_df.shape[1], "Barcode cluster", barcode_cluster_numbers)
         except AttributeError:
             warn("Did not generate barcode upset plot. Not enough fit groups.", MineWarning)
-        interpret_df.to_csv(path.join(output_folder, interpret_name), index=False)
+    interpret_df.to_csv(path.join(output_folder, interpret_name), index=False)
+    end_time = datetime.datetime.now()
+    elapsed = end_time - start_time
+    print(f"#### Analysis completed in {elapsed}. ####", flush=True)
 
 
 if __name__ == '__main__':

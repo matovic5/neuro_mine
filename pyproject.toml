@@ -12,18 +12,18 @@ authors = [
     {name = "Martin Haesemeyer", email = "haesemeyer.1@osu.edu"}
 ]
 dependencies = [
-    "h5py==3.14.*",
-    "matplotlib==3.9.*",
-    "numba==0.60.*",
-    "numpy==1.26.*",
-    "pandas==2.3.*",
-    "PySide6==6.7.*",
-    "scipy==1.13.*",
-    "tensorflow>=2.16.0",
-    "upsetplot==0.9.*",
-    "scikit-learn==1.6.*",
-    "urllib3==1.26.*",
-    "psutil==7.2.*"
+    "h5py",
+    "matplotlib",
+    "numba",
+    "numpy",
+    "pandas",
+    "PySide6",
+    "scipy",
+    "tensorflow",
+    "scikit-learn",
+    "urllib3",
+    "psutil",
+    "pathvalidate"
 ]
 
 [project.optional-dependencies]

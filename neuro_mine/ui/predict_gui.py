@@ -5,6 +5,9 @@ from PySide6.QtCore import QProcess
 from neuro_mine.ui.mine_predict import Ui_Widget
 import neuro_mine.ui.ui_utilities as uu
 import sys
+import os
+
+os.system('color')
 
 class Predict_App(QWidget, Ui_Widget):
     def __init__(self):
@@ -124,7 +127,10 @@ class Predict_App(QWidget, Ui_Widget):
         data = self.p.readAllStandardError()
         self.message(bytes(data).decode("utf-8"), True)
 
-    def message(self, s, error=False):
+    @staticmethod
+    def message(s, error=False):
+        if "WARNING: All log messages" in s:
+            return
         if error:
             print('\033[91m' + s + '\033[0m')
         else:
