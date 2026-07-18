@@ -70,12 +70,17 @@ if __name__ == '__main__':
     a_parser.add_argument("-eps", "--episodic", help="If set data is assumed to be episodic with one "
                                                      "predictor and one response file per episode.",
                           action="store_true")
+    a_parser.add_argument("-imw", "--ignore_mem", help="If set, memory warning for data will be ignored "
+                                                       "otherwise program will stop if memory might be insufficient.",
+                          action="store_true")
     a_parser.add_argument("-dsf", "--downsampling", help="The downsampling factor",
                           type=int, default=default_options['downsampling'])
 
     args = a_parser.parse_args()
 
     is_episodic = args.episodic
+
+    ignore_mem = args.ignore_mem
 
     r_paths = fh.process_file_args(args.responses)
     p_paths = fh.process_file_args(args.predictors)
@@ -141,6 +146,7 @@ if __name__ == '__main__':
                 "miner_verbose": miner_verbose,
                 "miner_train_fraction": miner_train_fraction,
                 "downsampling": downsampling,
+                "ignore_memory_warning": ignore_mem,
             },
         "run":
             {

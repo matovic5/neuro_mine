@@ -280,6 +280,7 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
     sqr_thresh = configuration["config"]["th_sqr"]
     taylor_cutoff = configuration["config"]["taylor_cut"]
     downsampling = configuration["config"]["downsampling"]
+    ignore_mem = configuration["config"]["ignore_memory_warning"]
 
     if len(resp_path) != len(pred_path):
         raise ValueError("Episodic data needs to have the same number of predictor and response files")
@@ -471,6 +472,12 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
         print("Reducing history length or downsampling data will reduce training data size.")
         print(f"Setting the downsampling factor to {downsample_proposal} will reduce datasize below {td_gb_thresh} GB.")
         print("############################")
+        if not ignore_mem:
+            print("### EXITING PROGRAM ###")
+            print("### Either reduce memory by downsampling or pass -imw flag on command line / set 'ignore memory'"
+                  " on GUI which will force the run to continue.")
+            print("If multiple files were chosen as inputs, processing of other files will continue.")
+            return
 
     # Fit model
     mdata_shuff = None
