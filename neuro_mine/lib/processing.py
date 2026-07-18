@@ -7,7 +7,7 @@ import h5py
 from neuro_mine.lib import file_handling as fh
 import json
 from neuro_mine.lib.utilities import safe_standardize, interp_events, safe_standardize_episodic
-from neuro_mine.lib.mine import Mine, MineData, MineSpikingData, MineException, MineWarning
+from neuro_mine.lib.mine import Mine, MineData, MineSpikingData, MineException, MineWarning, BaseData
 from.upsetplot import UpSet, from_indicators
 import matplotlib.pyplot as pl
 from warnings import warn
@@ -169,10 +169,9 @@ def generate_insights(mdata: Union[MineData, MineSpikingData], predictor_names: 
     """
     Based on mine analysis data produces a dataframe with information about each response
     :param mdata: MINE output data
-    :param is_spike_data: If true, responses are assumed to have been spikes
     :param predictor_names: The names of the predictors used
     :param response_names: The names of the responses that were used in fitting
-    :param kwargs: Further arguments about thresholds (test_score_thresh, taylor_sig, taylor_cutoff, lax_thresh, sqr_thresh_
+    :param kwargs: Further arguments about thresholds (test_score_thresh, taylor_sig, taylor_cutoff, lax_thresh, sqr_thresh_)
     :return: Dataframe with insights about model fits
     """
     if "test_score_thresh" in kwargs:
@@ -236,6 +235,23 @@ def generate_insights(mdata: Union[MineData, MineSpikingData], predictor_names: 
                 taylor_is_sig = taylor_mean - n_sigma * taylor_std - taylor_cutoff
                 interpret_dict[pc].append("Y" if taylor_is_sig > 0 else "N")
     return pd.DataFrame(interpret_dict)
+
+
+def generate_insights_from_file(filepath: str, **kwargs) -> pd.DataFrame:
+    """
+    Loads an analysis file generated during a run and returns an insight dataframe object
+    :param filepath: The path to the hdf5 analysis file
+    :param kwargs: Further arguments about thresholds (test_score_thresh, taylor_sig, taylor_cutoff, lax_thresh, sqr_thresh_)
+    :return: Dataframe with insights about model fits
+    """
+    with h5py.File(filepath, "r") as f:
+        data_object = BaseData.from_hdf5(f["analysis"])
+        name_grp = f["data_names"]
+        predictor_bytes = name_grp["predictor_names"][()]
+        predictor_names = [pb[0].decode("utf-8") for pb in predictor_bytes]
+        response_bytes = name_grp["response_names"][()]
+        response_names = [rb[0].decode("utf-8") for rb in response_bytes]
+    return generate_insights(data_object, predictor_names, response_names, **kwargs)
 
 
 def barcode_cluster_plot(insight_df: pd.DataFrame, predictor_names: List[str]) -> Tuple[pl.Figure, pd.DataFrame]:
