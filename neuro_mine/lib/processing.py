@@ -249,6 +249,19 @@ def barcode_cluster_plot(insight_df: pd.DataFrame, predictor_names: List[str]) -
     return fig, df_barcode
 
 
+def time_from_index(ix: int, model_history: int, ip_rate: float) -> float:
+    """
+    Computes for a given index how far back that is from the current time when saving receptive fields (which are
+    in the past)
+    :param ix: The index for which to compute the time
+    :param model_history: The used model history
+    :param ip_rate: The data framerate
+    :return: Time representation of index
+    """
+    ix_corr = ix - model_history + 1  # at model history is timepoint 0
+    return (1/ip_rate) * ix_corr
+
+
 def process_paired_files(resp_path: List[str], pred_path: List[str], configuration: Dict):
     start_time = datetime.datetime.now()
 
@@ -300,6 +313,9 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
     output_folder = path.join(path.split(resp_path[0])[0], f"{your_model}")
     if not path.exists(output_folder):
         os.makedirs(output_folder)
+    # the names of the output files are derived from the names of the corresponding response files, or in case of
+    # episodic data, from the name of the first response file
+    output_file_name = path.splitext(path.split(resp_path[0])[-1])[0]
 
     # We use a very simple heuristic to detect spiking data and we will not allow for mixed data. In other words
     # a response file either contains all continuous data or all spiking data. When in doubt, we will treat as
@@ -350,7 +366,8 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
                     raise MineException(f"The current downsampling factor reduces the data to less than two timepoints"
                                         f" in episode {epix}. Reduce downsampling")
 
-    output_file_name = path.splitext(path.split(resp_path[0])[-1])[0]
+    # TODO: Either this is important, then it needs to be implemented for episodic data as well, or it is not
+    #   in that case it should be removed
     # Save interpolated data with chosen column names if verbose flag is set - currently not for episodic data
     if miner_verbose and not is_episodic:
         df_ip_resp_data = pd.DataFrame(ip_resp_data, columns=resp_header)
@@ -362,12 +379,13 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
     # save standardizations for storage
     if not is_episodic:
         standardized_predictors, m_pred, s_pred = safe_standardize(ip_pred_data, axis=0)
-        if not time_as_pred:
+        if not time_as_pred:  # remove time column if it is not selected to be included as a predictor
             standardized_predictors = standardized_predictors[:, 1:]
             m_pred = m_pred[:, 1:]
             s_pred = s_pred[:, 1:]
         mine_pred = [sipd for sipd in standardized_predictors.T]
-        # In the following the first column is removed since it is time
+        # For responses the time (first) column is always removed since we do not attempt to predict time
+        # Responses do not get standardized if they represent spikes
         if not is_spike_data:
             mine_resp, m_resp, s_resp = safe_standardize(ip_resp_data[:, 1:], axis=0)
             mine_resp = mine_resp.T
@@ -377,7 +395,7 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
             # and the divisive component to 1
             m_resp = np.zeros(mine_resp.shape[0])
             s_resp = np.ones(mine_resp.shape[0])
-    else:  # episodic data
+    else:  # episodic data - we use one standardization across all episodes but take care to keep episodes separate
         standardized_predictors, m_pred, s_pred = safe_standardize_episodic(ip_pred_data, axis=0)
         if not time_as_pred:
             standardized_predictors = [sp[:, 1:] for sp in standardized_predictors]
@@ -405,26 +423,28 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
         ip_rate = 1 / np.mean(np.diff(ip_time))
     else:
         ip_rate = 1 / np.mean(np.diff(ip_time[0]))
+
     # based on the rate, compute the number of frames within the model history and taylor-look-ahead
     model_history = int(np.round(history_time * ip_rate, 0))
     if model_history < 1:
         model_history = 1
-
-    if not is_episodic:
-        if ip_time.size - model_history < 10:
-            warn("There are less than 10 datapoints available for training. Training will likely fail.")
-    else:
-        if sum([ipt.size for ipt in ip_time]) - model_history < 10:
-            warn("There are less than 10 datapoints available for training. Training will likely fail.")
-
     configuration["run"]["model_history_frames"] = model_history
-    # Save configuration to file
-    with open(path.join(output_folder, f"MINE_{output_file_name}_run_config.json"), 'w') as config_file:
-        json.dump(configuration, config_file, indent=2)
-
     taylor_look_ahead = int(np.round(model_history * taylor_look_fraction, 0))
     if taylor_look_ahead < 1:
         taylor_look_ahead = 1
+
+    # Set taylor_pred_every based on history length, in other words we will perform taylor prediction starting from
+    # frames that are "model_history" apart, since tighter analysis likely won't yield more information due to
+    # correlations induced by the model input convolution
+    taylor_pred_every = model_history
+
+    # Warn the user if there is a very small amount of training data available
+    if not is_episodic:
+        if ip_time.size - model_history < 10:
+            warn("There are less than 10 datapoints available for training. Training will likely fail.", MineWarning)
+    else:
+        if sum([ipt.size for ipt in ip_time]) - model_history < 10:
+            warn("There are less than 10 datapoints available for training. Training will likely fail.", MineWarning)
 
     # compute expected training data size and warn user if crossing a threshold
     # we set the threshold to 3/4 of the total available memory on the machine
@@ -452,13 +472,8 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
         print(f"Setting the downsampling factor to {downsample_proposal} will reduce datasize below {td_gb_thresh} GB.")
         print("############################")
 
-    ###
     # Fit model
-    ###
     mdata_shuff = None
-    # Set taylor_pred_every based on history length
-    taylor_pred_every = model_history
-
     weight_file_name = f"MINE_{output_file_name}_weights.hdf5"
     with h5py.File(path.join(output_folder, weight_file_name), "w") as weight_file:
         w_grp = weight_file.create_group("fit")
@@ -476,7 +491,7 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
         for i, r in enumerate(resp_header[1:]):  # first entry is "Time"
             name_grp.create_dataset(f"{i}", data=r.encode('utf-8'))
 
-    # rotate mine_resp on user request and re-fit without computing any Taylor just to get test correlations
+    # rotate mine_resp on user request and re-fit without computing any Taylor information to get test correlations
     if run_shuffle:
         print("#### RUNNING PERMUTED CONTROL DATA (SHUFFLES) ####", flush=True)
         if not is_episodic:
@@ -495,6 +510,7 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
             else:
                 mdata_shuff = miner.analyze_episodic(mine_pred, mine_resp_shuff)
 
+    # save full analysis results (and results of shuffle if it was requested) to file
     full_ana_file_name = f"MINE_{output_file_name}_analysis.hdf5"
     with h5py.File(path.join(output_folder, full_ana_file_name), "w") as ana_file:
         std_grp = ana_file.create_group("standardization")
@@ -521,21 +537,31 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
                                      lax_thresh=lax_thresh,
                                      sqr_thresh=sqr_thresh)
     model_scores = mdata.roc_auc_test if is_spike_data else mdata.correlations_test
-    if not np.any(model_scores >= test_score_thresh):
-        # save insights here if no units were above threshold otherwise save after barcode clustering
-        interpret_df.to_csv(path.join(output_folder, interpret_name), index=False)
 
-    # save Jacobians: One CSV file for each predictor, containing the Jacobians for each response
+    # perform barcode clustering - store in insight file and as upset-plot
+    if np.any(model_scores >= test_score_thresh):
+        try:
+            fig, df_barcode = barcode_cluster_plot(interpret_df[interpret_df["Fit"] == "Y"], predictor_columns)
+            fig.savefig(path.join(output_folder, f"MINE_{output_file_name}_BarcodeUpsetPlot.pdf"))
+
+            # augment insights with barcodes and save
+            barcode_cluster_numbers = np.full(interpret_df.shape[0], -1, dtype=int)
+            fit_ix = np.arange(interpret_df.shape[0]).astype(int)[interpret_df["Fit"] == "Y"]
+            for i, fix in enumerate(fit_ix):
+                barcode = np.array(df_barcode.iloc[i]).astype(int)
+                barcode_cluster_numbers[fix] = sum([bc*(2**j) for j, bc in enumerate(barcode)])
+            interpret_df.insert(interpret_df.shape[1], "Barcode cluster", barcode_cluster_numbers)
+        except AttributeError:
+            warn("Did not generate barcode upset plot. Not enough fit groups.", MineWarning)
+    interpret_df.to_csv(path.join(output_folder, interpret_name), index=False)
+
+    # save Jacobians if requested by user: One CSV file for each predictor, containing the Jacobians for each response
     # column headers will be the time delay relative to t=0, since our modeling is set up
     # such that convolutions are restricted to the past (hence model_history)
-    def time_from_index(ix: int) -> float:
-        ix_corr = ix - model_history + 1  # at model history is timepoint 0
-        return (1/ip_rate) * ix_corr
-
     n_objects = model_scores.size
     if fit_jacobian and np.any(model_scores >= test_score_thresh):
         for i, pc in enumerate(predictor_columns):
-            jac_dict = {"Response": []} | {f"{time_from_index(t)}": [] for t in range(model_history)}
+            jac_dict = {"Response": []} | {f"{time_from_index(t, model_history, ip_rate)}": [] for t in range(model_history)}
             jac_file_name = f"MINE_{output_file_name}_ReceptiveFields_{pc}.csv"
             for j in range(n_objects):
                 if np.any(np.isnan(mdata.jacobians[j, :])):
@@ -545,7 +571,7 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
                 # index out the predictor related receptive field
                 rf = mdata.jacobians[j, i*model_history:(i+1)*model_history]
                 for t in range(model_history):
-                    jac_dict[f"{time_from_index(t)}"].append(rf[t])
+                    jac_dict[f"{time_from_index(t, model_history, ip_rate)}"].append(rf[t])
             df_jac = pd.DataFrame(jac_dict)
             df_jac.to_csv(path.join(output_folder, jac_file_name), index=False)
 
@@ -592,29 +618,15 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
         pl.ylabel("2nd order approximation $R^2$")
         fig.savefig(path.join(output_folder, f"MINE_{output_file_name}_LinearityMetrics.pdf"))
 
-        # perform barcode clustering
-        try:
-            fig, df_barcode = barcode_cluster_plot(interpret_df[interpret_df["Fit"] == "Y"], predictor_columns)
-            fig.savefig(path.join(output_folder, f"MINE_{output_file_name}_BarcodeUpsetPlot.pdf"))
-
-            # augment insights with barcodes and save
-            barcode_cluster_numbers = np.full(interpret_df.shape[0], -1, dtype=int)
-            fit_ix = np.arange(interpret_df.shape[0]).astype(int)[interpret_df["Fit"] == "Y"]
-            for i, fix in enumerate(fit_ix):
-                barcode = np.array(df_barcode.iloc[i]).astype(int)
-                barcode_cluster_numbers[fix] = sum([bc*(2**j) for j, bc in enumerate(barcode)])
-            interpret_df.insert(interpret_df.shape[1], "Barcode cluster", barcode_cluster_numbers)
-        except AttributeError:
-            warn("Did not generate barcode upset plot. Not enough fit groups.", MineWarning)
-    interpret_df.to_csv(path.join(output_folder, interpret_name), index=False)
+    # compute elapsed time across all data processing
     end_time = datetime.datetime.now()
     elapsed = end_time - start_time
-    # add elapsed time to configuration and overwrite config file
+    # add elapsed time to configuration
     configuration["run"]["time_elapsed_seconds"] = elapsed.total_seconds()
     # Save configuration to file
     with open(path.join(output_folder, f"MINE_{output_file_name}_run_config.json"), 'w') as config_file:
         json.dump(configuration, config_file, indent=2)
-
+    # Print elapsed time to command line
     print(f"#### Analysis completed in {elapsed}. ####", flush=True)
 
 
