@@ -164,7 +164,7 @@ def joint_interpolation(predictor_data: np.ndarray, response_data: np.ndarray, p
     return ip_pred_data, ip_resp_data, ip_time
 
 
-def generate_insights(mdata: Union[MineData, MineSpikingData], is_spike_data: bool, predictor_names: List[str],
+def generate_insights(mdata: Union[MineData, MineSpikingData], predictor_names: List[str],
                       response_names: List[str], **kwargs) -> pd.DataFrame:
     """
     Based on mine analysis data produces a dataframe with information about each response
@@ -195,6 +195,9 @@ def generate_insights(mdata: Union[MineData, MineSpikingData], is_spike_data: bo
         sqr_thresh = kwargs["sqr_thresh"]
     else:
         sqr_thresh = 0.5
+
+    # use data object type to infer response type
+    is_spike_data = type(mdata) == MineSpikingData
 
     model_scores = mdata.roc_auc_test if is_spike_data else mdata.correlations_test
     interpret_dict = {"Response": [], "Fit": []} | {ph: [] for ph in predictor_names} | {"Linearity": []}
@@ -541,7 +544,7 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
     # Output model insights as csv
     ###
     interpret_name = f"MINE_{output_file_name}_Insights.csv"
-    interpret_df = generate_insights(mdata, is_spike_data, predictor_columns, response_names,
+    interpret_df = generate_insights(mdata, predictor_columns, response_names,
                                      test_score_thresh=test_score_thresh,
                                      taylor_sig=taylor_sig,
                                      taylor_cutoff=taylor_cutoff,
