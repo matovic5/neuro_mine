@@ -123,35 +123,37 @@ if __name__ == '__main__':
     # Restrict your_model to be a valid path name
     your_model = sanitize_filename(your_model, replacement_text='_')
 
+    # set up shared part of configuration
+    configuration = {
+        "config":
+            {
+                "use_time": time_as_pred,
+                "run_shuffle": run_shuffle,
+                "th_test": test_score_thresh,
+                "taylor_sig": taylor_sig,
+                "taylor_cut": taylor_cutoff,
+                "th_lax": lax_thresh,
+                "th_sqr": sqr_thresh,
+                "history": history_time,
+                "taylor_look": taylor_look_fraction,
+                "jacobian": fit_jacobian,
+                "n_epochs": fit_epochs,
+                "miner_verbose": miner_verbose,
+                "miner_train_fraction": miner_train_fraction,
+                "downsampling": downsampling,
+            },
+        "run":
+            {
+                "model_name": your_model,
+                "timestamp": datetime.now().now().isoformat(),
+            }
+    }
+
     if not is_episodic:
         for i, pair in enumerate(file_pairs):
-            # save run information and configuration used as json file which we set up here
-            configuration = {
-                "config":
-                    {
-                        "use_time": time_as_pred,
-                        "run_shuffle": run_shuffle,
-                        "th_test": test_score_thresh,
-                        "taylor_sig": taylor_sig,
-                        "taylor_cut": taylor_cutoff,
-                        "th_lax": lax_thresh,
-                        "th_sqr": sqr_thresh,
-                        "history": history_time,
-                        "taylor_look": taylor_look_fraction,
-                        "jacobian": fit_jacobian,
-                        "n_epochs": fit_epochs,
-                        "miner_verbose": miner_verbose,
-                        "miner_train_fraction": miner_train_fraction,
-                        "downsampling": downsampling,
-                    },
-                "run":
-                    {
-                        "model_name": your_model,
-                        "predictor_file": pair[1],
-                        "response_file": pair[0],
-                        "timestamp": datetime.now().now().isoformat(),
-                    }
-            }
+            # add files to config information
+            configuration["run"]["predictor_file"] = pair[1]
+            configuration["run"]["response_file"] = pair[0]
 
 
             ###
@@ -161,30 +163,8 @@ if __name__ == '__main__':
     else:
         r_files = [pair[0] for pair in file_pairs]
         p_files = [pair[1] for pair in file_pairs]
-        configuration = {
-            "config":
-                {
-                    "use_time": time_as_pred,
-                    "run_shuffle": run_shuffle,
-                    "th_test": test_score_thresh,
-                    "taylor_sig": taylor_sig,
-                    "taylor_cut": taylor_cutoff,
-                    "th_lax": lax_thresh,
-                    "th_sqr": sqr_thresh,
-                    "history": history_time,
-                    "taylor_look": taylor_look_fraction,
-                    "jacobian": fit_jacobian,
-                    "n_epochs": fit_epochs,
-                    "miner_verbose": miner_verbose,
-                    "miner_train_fraction": miner_train_fraction,
-                    "downsampling": downsampling,
-                },
-            "run":
-                {
-                    "model_name": your_model,
-                    "predictor_files": p_files,
-                    "response_files": r_files,
-                    "timestamp": datetime.now().now().isoformat(),
-                }
-        }
+        # add files to config information
+        configuration["run"]["predictor_files"] = p_files
+        configuration["run"]["response_files"] = r_files
+
         process_paired_files(r_files, p_files, configuration)
