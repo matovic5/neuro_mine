@@ -370,14 +370,22 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
                     raise MineException(f"The current downsampling factor reduces the data to less than two timepoints"
                                         f" in episode {epix}. Reduce downsampling")
 
-    # TODO: Either this is important, then it needs to be implemented for episodic data as well, or it is not
-    #   in that case it should be removed
-    # Save interpolated data with chosen column names if verbose flag is set - currently not for episodic data
-    if miner_verbose and not is_episodic:
-        df_ip_resp_data = pd.DataFrame(ip_resp_data, columns=resp_header)
-        df_ip_resp_data.to_csv(path.join(output_folder, f"MINE_{output_file_name}_interpolated_responses.csv"), index=False)
-        df_ip_pred_data = pd.DataFrame(ip_pred_data, columns=pred_header)
-        df_ip_pred_data.to_csv(path.join(output_folder, f"MINE_{output_file_name}_interpolated_predictors.csv"), index=False)
+   # Save interpolated data with chosen column names if verbose flag is set
+    if miner_verbose:
+        if not is_episodic:
+            df_ip_resp_data = pd.DataFrame(ip_resp_data, columns=resp_header)
+            df_ip_resp_data.to_csv(path.join(output_folder, f"MINE_{output_file_name}_interpolated_responses.csv"), index=False)
+            df_ip_pred_data = pd.DataFrame(ip_pred_data, columns=pred_header)
+            df_ip_pred_data.to_csv(path.join(output_folder, f"MINE_{output_file_name}_interpolated_predictors.csv"), index=False)
+        else:
+            # save one csv file with interpolated data for each episode
+            for i, (iprd, ippd) in enumerate(zip(ip_resp_data, ip_pred_data)):
+                df_ip_resp_data = pd.DataFrame(iprd, columns=resp_header)
+                df_ip_resp_data.to_csv(path.join(output_folder, f"MINE_{output_file_name}_interpolated_responses_ep{i:03d}.csv"),
+                                       index=False)
+                df_ip_pred_data = pd.DataFrame(ippd, columns=pred_header)
+                df_ip_pred_data.to_csv(path.join(output_folder, f"MINE_{output_file_name}_interpolated_predictors_ep{i:03d}.csv"),
+                                       index=False)
 
     # perform data-appropriate standardization of predictors and responses
     # save standardizations for storage
