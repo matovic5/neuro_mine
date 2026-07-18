@@ -294,8 +294,9 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
         resp_data, resp_has_header, resp_header = fh.CSVParser(resp_path[0], "R").load_data()
         pred_data, pred_has_header, pred_header = fh.CSVParser(pred_path[0], "P").load_data()
 
-    # store all output file in a sub-folder of the response file folder - for episodic data we use the first response
-    # file to indicate the storage location, same as for non-episodic data
+    # store all output files in a sub-folder of the response file folder - for episodic data we use the first response
+    # file to indicate the storage location, for non-episodic data if response files originate from different locations
+    # the output folders will be placed into those locations
     output_folder = path.join(path.split(resp_path[0])[0], f"{your_model}")
     if not path.exists(output_folder):
         os.makedirs(output_folder)
