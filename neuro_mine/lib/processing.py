@@ -530,12 +530,16 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
         if mdata_shuff is not None:
             ana_grp = ana_file.create_group("analysis_shuffled")
             mdata_shuff.save_to_hdf5(ana_grp)
+        # save names of predictors and responses in analysis file
+        name_grp = ana_file.create_group("data_names")
+        predictor_columns = pred_header if time_as_pred else pred_header[1:]
+        response_names = resp_header[1:]
+        name_grp.create_dataset("predictor_names", data=np.vstack([str.encode(pc) for pc in predictor_columns]))
+        name_grp.create_dataset("response_names", data=np.vstack([str.encode(rn) for rn in response_names]))
 
     ###
     # Output model insights as csv
     ###
-    predictor_columns = pred_header if time_as_pred else pred_header[1:]
-    response_names = resp_header[1:]
     interpret_name = f"MINE_{output_file_name}_Insights.csv"
     interpret_df = generate_insights(mdata, is_spike_data, predictor_columns, response_names,
                                      test_score_thresh=test_score_thresh,
