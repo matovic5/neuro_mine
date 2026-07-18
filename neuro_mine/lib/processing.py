@@ -608,6 +608,12 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
     interpret_df.to_csv(path.join(output_folder, interpret_name), index=False)
     end_time = datetime.datetime.now()
     elapsed = end_time - start_time
+    # add elapsed time to configuration and overwrite config file
+    configuration["run"]["time_elapsed_seconds"] = elapsed.total_seconds()
+    # Save configuration to file
+    with open(path.join(output_folder, f"MINE_{output_file_name}_run_config.json"), 'w') as config_file:
+        json.dump(configuration, config_file, indent=2)
+
     print(f"#### Analysis completed in {elapsed}. ####", flush=True)
 
 
