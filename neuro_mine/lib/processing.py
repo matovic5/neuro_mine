@@ -317,10 +317,13 @@ def test_metrics_plot(mdata: Union[MineData, MineSpikingData], mdata_shuff: Unio
     for i, ct in enumerate(c_thresholds):
         ab_real[i] = np.sum(model_scores > ct) / n_objects
         ab_shuff[i] = np.sum(shuffle_scores > ct) / n_objects
-    divisor = ab_shuff.copy()
-    divisor[
-        divisor < 1 / n_objects] = 1 / n_objects  # if no shuffle objects were identified we cannot assume infinite enrichment
-    enrichment = ab_real / divisor
+
+    # compute false-discovery-rate as the fraction of identified positives in the suffled over the real data
+    fdr = ab_shuff / (ab_real+1e-12)
+    fdr[np.logical_and(ab_real == 0, ab_shuff > 0)] = 1  # a false discovery rate of 1 is a reasonable assumption if only shuffles are positive
+    fdr[np.logical_and(ab_real == 0, ab_shuff == 0)] = np.nan  # no determination if both are 0
+
+    # plot identified fractions on top, false discovery rate on bottom plot
     axes[0].plot(c_thresholds, ab_real, label="Real data")
     axes[0].plot(c_thresholds, ab_shuff, label="Shuffled data")
     axes[0].plot([test_score_thresh, test_score_thresh], [0, 1], 'k--', label="Threshold")
@@ -330,11 +333,12 @@ def test_metrics_plot(mdata: Union[MineData, MineSpikingData], mdata_shuff: Unio
     axes[0].set_ylim(0, 1)
     axes[0].set_xlim(0, 1)
     axes[0].legend()
-    axes[1].plot(c_thresholds, enrichment)
-    axes[1].plot([test_score_thresh, test_score_thresh], [np.nanmin(enrichment), np.nanmax(enrichment)], 'k--')
+    axes[1].plot(c_thresholds, fdr)
+    axes[1].plot([test_score_thresh, test_score_thresh], [0, 1], 'k--')
     axes[1].set_xlim(0, 1)
+    axes[1].set_ylim(0, 1)
     axes[1].set_xlabel(f"Test {metric_label} cutoff")
-    axes[1].set_ylabel("Enrichment over shuffle")
+    axes[1].set_ylabel("False discovery rate")
     fig.tight_layout()
     return fig
 
