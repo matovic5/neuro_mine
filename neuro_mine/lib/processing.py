@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, List, Union
+from typing import Dict, Tuple, List, Union, Optional
 import numpy as np
 import pandas as pd
 from os import path
@@ -270,6 +270,75 @@ def barcode_cluster_plot(insight_df: pd.DataFrame, predictor_names: List[str]) -
     return fig, df_barcode
 
 
+def linearity_metrics_plot(mdata: BaseData, linear_threshold: Optional[float],
+                           squared_threshold: Optional[float]) -> pl.Figure:
+    """
+    Produces a scatter plot of R2 values of linear and squared model approximations together with
+    :param mdata: The Mine result data from a fit or reinstantiated from an analysis file
+    :param linear_threshold: The linear metric threshold
+    :param squared_threshold: The squared or 2nd order threshold
+    :return: Figure object
+    """
+    fig = pl.figure()
+    pl.scatter(mdata.model_lin_approx_scores, mdata.model_2nd_approx_scores, s=2)
+    if linear_threshold is not None:
+        pl.plot([linear_threshold, linear_threshold], [-1, 1], 'k--')
+    if squared_threshold is not None:
+        pl.plot([-1, 1], [squared_threshold, squared_threshold], 'k--')
+    pl.xlim(-1, 1)
+    pl.ylim(-1, 1)
+    pl.xlabel("Linear approximation $R^2$")
+    pl.ylabel("2nd order approximation $R^2$")
+    return fig
+
+
+def test_metrics_plot(mdata: Union[MineData, MineSpikingData], mdata_shuff: Union[MineData, MineSpikingData],
+                      test_score_thresh: float) -> pl.Figure:
+    """
+    Plots the comparison of test scores obtained on real data as well as permuted data to allow judging reasonable test
+    score threshold for further analysis.
+    :param mdata: The Mine result data from a fit or reinstantiated from an analysis file
+    :param mdata_shuff: The Mine result data on permutations from a fit or reinstantiated from an analysis file
+    :param test_score_thresh: The currently selected test score threshold
+    :return: Figure object
+    """
+    if type(mdata) == MineSpikingData:
+        is_spike_data = True
+    else:
+        is_spike_data = False
+    shuffle_scores = mdata_shuff.roc_auc_test if is_spike_data else mdata_shuff.correlations_test
+    model_scores = mdata.roc_auc_test if is_spike_data else mdata.correlations_test
+    n_objects = model_scores.size
+
+    fig, axes = pl.subplots(nrows=2)
+    c_thresholds = np.linspace(0, 1)
+    ab_real = np.full_like(c_thresholds, np.nan)
+    ab_shuff = np.full_like(c_thresholds, np.nan)
+    for i, ct in enumerate(c_thresholds):
+        ab_real[i] = np.sum(model_scores > ct) / n_objects
+        ab_shuff[i] = np.sum(shuffle_scores > ct) / n_objects
+    divisor = ab_shuff.copy()
+    divisor[
+        divisor < 1 / n_objects] = 1 / n_objects  # if no shuffle objects were identified we cannot assume infinite enrichment
+    enrichment = ab_real / divisor
+    axes[0].plot(c_thresholds, ab_real, label="Real data")
+    axes[0].plot(c_thresholds, ab_shuff, label="Shuffled data")
+    axes[0].plot([test_score_thresh, test_score_thresh], [0, 1], 'k--', label="Threshold")
+    metric_label = "ROC AUC" if is_spike_data else "Correlation"
+    axes[0].set_xlabel(f"Test {metric_label} cutoff")
+    axes[0].set_ylabel("Fraction above threshold")
+    axes[0].set_ylim(0, 1)
+    axes[0].set_xlim(0, 1)
+    axes[0].legend()
+    axes[1].plot(c_thresholds, enrichment)
+    axes[1].plot([test_score_thresh, test_score_thresh], [np.nanmin(enrichment), np.nanmax(enrichment)], 'k--')
+    axes[1].set_xlim(0, 1)
+    axes[1].set_xlabel(f"Test {metric_label} cutoff")
+    axes[1].set_ylabel("Enrichment over shuffle")
+    fig.tight_layout()
+    return fig
+
+
 def time_from_index(ix: int, model_history: int, ip_rate: float) -> float:
     """
     Computes for a given index how far back that is from the current time when saving receptive fields (which are
@@ -283,11 +352,21 @@ def time_from_index(ix: int, model_history: int, ip_rate: float) -> float:
     return (1/ip_rate) * ix_corr
 
 
-def mem_threshold_warn(ip_pred_data: Union[List[np.ndarray], np.ndarray], model_history: int, is_episodic: bool, threshold_level=0.75) -> bool:
+def mem_threshold_warn(ip_pred_data: Union[List[np.ndarray], np.ndarray], model_history: int, is_episodic: bool,
+                       threshold_fraction=0.75) -> bool:
+    """
+    Estimate memory usage of model training and warn user if it exceeds threshold level. Also prints downsampling
+    suggestion to reduce memory usage.
+    :param ip_pred_data: The prediction data to be used during training
+    :param model_history: The number of timepoints in the model history
+    :param is_episodic: Indicates whether training is across episodes (i.e., ip_pred_data is a List)
+    :param threshold_fraction: The fraction of total memory that can be filled before triggering a warning
+    :return: True if memory exceeded threshold level
+    """
     # compute expected training data size and warn user if crossing a threshold
     # we set the threshold to 3/4 of the total available memory on the machine
     mem_gb_avail = int(psutil.virtual_memory().total / (1024**3))
-    td_gb_thresh = int(mem_gb_avail * threshold_level)
+    td_gb_thresh = int(mem_gb_avail * threshold_fraction)
     td_byte_thresh = int(td_gb_thresh * 1024**3 / 3)  # division by three to safely account for internal data duplication - a future version ideally avoids this
     td_length = sum([pd.shape[0] for pd in ip_pred_data]) if is_episodic else ip_pred_data.shape[0]
     n_predictors = ip_pred_data[0].shape[1] if is_episodic else ip_pred_data.shape[1]
@@ -582,7 +661,6 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
                                      lax_thresh=lax_thresh,
                                      sqr_thresh=sqr_thresh)
     model_scores = mdata.roc_auc_test if is_spike_data else mdata.correlations_test
-
     # perform barcode clustering - store in insight file and as upset-plot
     if np.any(model_scores >= test_score_thresh):
         try:
@@ -623,44 +701,12 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
     # if shuffles were calculated plot fraction of above threshold units in data and shuffle
     # versus correlation threshold levels
     if run_shuffle:
-        shuffle_scores = mdata_shuff.roc_auc_test if is_spike_data else mdata_shuff.correlations_test
-        fig, axes = pl.subplots(nrows=2)
-        c_thresholds = np.linspace(0, 1)
-        ab_real = np.full_like(c_thresholds, np.nan)
-        ab_shuff = np.full_like(c_thresholds, np.nan)
-        for i, ct in enumerate(c_thresholds):
-            ab_real[i] = np.sum(model_scores > ct) / n_objects
-            ab_shuff[i] = np.sum(shuffle_scores > ct) / n_objects
-        divisor = ab_shuff.copy()
-        divisor[divisor < 1/n_objects] = 1/n_objects  # if no shuffle objects were identified we cannot assume infinite enrichment
-        enrichment = ab_real / divisor
-        axes[0].plot(c_thresholds, ab_real, label="Real data")
-        axes[0].plot(c_thresholds, ab_shuff, label="Shuffled data")
-        axes[0].plot([test_score_thresh, test_score_thresh], [0, 1], 'k--', label="Threshold")
-        metric_label = "ROC AUC" if is_spike_data else "Correlation"
-        axes[0].set_xlabel(f"Test {metric_label} cutoff")
-        axes[0].set_ylabel("Fraction above threshold")
-        axes[0].set_ylim(0, 1)
-        axes[0].set_xlim(0, 1)
-        axes[0].legend()
-        axes[1].plot(c_thresholds, enrichment)
-        axes[1].plot([test_score_thresh, test_score_thresh], [np.nanmin(enrichment), np.nanmax(enrichment)], 'k--')
-        axes[1].set_xlim(0, 1)
-        axes[1].set_xlabel(f"Test {metric_label} cutoff")
-        axes[1].set_ylabel("Enrichment over shuffle")
-        fig.tight_layout()
+        fig = test_metrics_plot(mdata, mdata_shuff, test_score_thresh)
         fig.savefig(path.join(output_folder, f"MINE_{output_file_name}_TestMetrics.pdf"))
 
     # plot linearity metrics and thresholds
     if np.any(model_scores >= test_score_thresh):
-        fig = pl.figure()
-        pl.scatter(mdata.model_lin_approx_scores, mdata.model_2nd_approx_scores, s=2)
-        pl.plot([lax_thresh, lax_thresh], [-1, 1], 'k--')
-        pl.plot([-1, 1], [sqr_thresh, sqr_thresh], 'k--')
-        pl.xlim(-1, 1)
-        pl.ylim(-1, 1)
-        pl.xlabel("Linear approximation $R^2$")
-        pl.ylabel("2nd order approximation $R^2$")
+        fig = linearity_metrics_plot(mdata, lax_thresh, sqr_thresh)
         fig.savefig(path.join(output_folder, f"MINE_{output_file_name}_LinearityMetrics.pdf"))
 
     # compute elapsed time across all data processing
