@@ -4,6 +4,8 @@ import pandas as pd
 from os import path
 import os
 import h5py
+from tensorflow.python.ops.metrics_impl import true_positives
+
 from neuro_mine.lib import file_handling as fh
 import json
 from neuro_mine.lib.utilities import safe_standardize, interp_events, safe_standardize_episodic
@@ -281,6 +283,36 @@ def time_from_index(ix: int, model_history: int, ip_rate: float) -> float:
     return (1/ip_rate) * ix_corr
 
 
+def mem_threshold_warn(ip_pred_data: Union[List[np.ndarray], np.ndarray], model_history: int, is_episodic: bool, threshold_level=0.75) -> bool:
+    # compute expected training data size and warn user if crossing a threshold
+    # we set the threshold to 3/4 of the total available memory on the machine
+    mem_gb_avail = int(psutil.virtual_memory().total / (1024**3))
+    td_gb_thresh = int(mem_gb_avail * threshold_level)
+    td_byte_thresh = int(td_gb_thresh * 1024**3 / 3)  # division by three to safely account for internal data duplication - a future version ideally avoids this
+    td_length = sum([pd.shape[0] for pd in ip_pred_data]) if is_episodic else ip_pred_data.shape[0]
+    n_predictors = ip_pred_data[0].shape[1] if is_episodic else ip_pred_data.shape[1]
+    td_size = td_length * model_history * n_predictors * 4  # 32-bit float, 4 bytes per number
+    if td_size > td_byte_thresh:
+        downsample_to_thresh = int(td_size // td_byte_thresh + 2)
+        downsample_proposal = 1
+        for i in range(2, downsample_to_thresh):
+            downsample_proposal += 1
+            m_hist = model_history // i
+            if m_hist < 1:
+                m_hist = 1
+            if (td_length//downsample_proposal) * m_hist * n_predictors * 4 < td_byte_thresh:
+                break
+        print("############################")
+        print(f"The total system memory is {mem_gb_avail} GB RAM")
+        print(f"Expected training data size is larger than {td_size // (1024**3)} GB.")
+        print("This either leads to out-of-memory errors, unexplained crashes or sluggish performance.")
+        print("Reducing history length or downsampling data will reduce training data size.")
+        print(f"Setting the downsampling factor to {downsample_proposal} will reduce datasize below {td_gb_thresh} GB.")
+        print("############################")
+        return True
+    return False
+
+
 def process_paired_files(resp_path: List[str], pred_path: List[str], configuration: Dict):
     start_time = datetime.datetime.now()
 
@@ -474,37 +506,12 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
         if sum([ipt.size for ipt in ip_time]) - model_history < 10:
             warn("There are less than 10 datapoints available for training. Training will likely fail.", MineWarning)
 
-    # compute expected training data size and warn user if crossing a threshold
-    # we set the threshold to 3/4 of the total available memory on the machine
-    mem_gb_avail = int(psutil.virtual_memory().total / (1024**3))
-    td_gb_thresh = int(mem_gb_avail * 3 / 4)
-    td_byte_thresh = int(td_gb_thresh * 1024**3 / 3)  # division by three to safely account for internal data duplication - a future version ideally avoids this
-    td_length = sum([pd.shape[0] for pd in ip_pred_data]) if is_episodic else ip_pred_data.shape[0]
-    n_predictors = ip_pred_data[0].shape[1] if is_episodic else ip_pred_data.shape[1]
-    td_size = td_length * model_history * n_predictors * 4  # 32-bit float, 4 bytes per number
-    if td_size > td_byte_thresh:
-        downsample_to_thresh = int(td_size // td_byte_thresh + 2)
-        downsample_proposal = 1
-        for i in range(2, downsample_to_thresh):
-            downsample_proposal += 1
-            m_hist = model_history // i
-            if m_hist < 1:
-                m_hist = 1
-            if (td_length//downsample_proposal) * m_hist * n_predictors * 4 < td_byte_thresh:
-                break
-        print("############################")
-        print(f"The total system memory is {mem_gb_avail} GB RAM")
-        print(f"Expected training data size is larger than {td_size // (1024**3)} GB.")
-        print("This either leads to out-of-memory errors, unexplained crashes or sluggish performance.")
-        print("Reducing history length or downsampling data will reduce training data size.")
-        print(f"Setting the downsampling factor to {downsample_proposal} will reduce datasize below {td_gb_thresh} GB.")
-        print("############################")
-        if not ignore_mem:
-            print("### EXITING PROGRAM ###")
-            print("### Either reduce memory by downsampling or pass -imw flag on command line / set 'ignore memory'"
-                  " on GUI which will force the run to continue.")
-            print("If multiple files were chosen as inputs, processing of other files will continue.")
-            return
+    if mem_threshold_warn(ip_pred_data, model_history, is_episodic) and (not ignore_mem):
+        print("### EXITING PROGRAM ###")
+        print("### Either reduce memory by downsampling or pass -imw flag on command line / set 'ignore memory'"
+              " on GUI which will force the run to continue.")
+        print("If multiple files were chosen as inputs, processing of other files will continue.")
+        return
 
     # Fit model
     mdata_shuff = None
