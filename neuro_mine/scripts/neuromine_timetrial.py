@@ -16,7 +16,7 @@ if __name__ == '__main__':
     # will not work if tensorflow is run on the GPU!!
     os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
-    a_parser = argparse.ArgumentParser(prog="neuromine_timetrial.py",
+    a_parser = argparse.ArgumentParser(prog="Time-trial",
                                        description="Tests runtime for various fit configurations.")
     a_parser.add_argument("-o", "--outdir", help="Path to output directory for plots and csv files.",
                           type=str, required=True)
