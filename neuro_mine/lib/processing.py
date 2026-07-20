@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, List, Union, Optional
+from typing import Dict, Tuple, List, Union, Optional, Any
 import numpy as np
 import pandas as pd
 from os import path
@@ -406,31 +406,24 @@ def roll_2d_array(in_array: np.ndarray, rolls: np.ndarray[int]) -> np.ndarray:
     return out_array
 
 
-def process_paired_files(resp_path: List[str], pred_path: List[str], configuration: Dict):
-    start_time = datetime.datetime.now()
-
-    your_model = configuration["run"]["model_name"]
-    run_shuffle = configuration["config"]["run_shuffle"]
-    time_as_pred = configuration["config"]["use_time"]
-    history_time = configuration["config"]["history"]
-    taylor_look_fraction = configuration["config"]["taylor_look"]
-    miner_train_fraction = configuration["config"]["miner_train_fraction"]
-    test_score_thresh = configuration["config"]["th_test"]
-    fit_jacobian = configuration["config"]["jacobian"]
-    fit_epochs = configuration["config"]["n_epochs"]
-    miner_verbose = configuration["config"]["miner_verbose"]
-    taylor_sig = configuration["config"]["taylor_sig"]
-    lax_thresh = configuration["config"]["th_lax"]
-    sqr_thresh = configuration["config"]["th_sqr"]
-    taylor_cutoff = configuration["config"]["taylor_cut"]
-    downsampling = configuration["config"]["downsampling"]
-    ignore_mem = configuration["config"]["ignore_memory_warning"]
-
-    if len(resp_path) != len(pred_path):
-        raise ValueError("Episodic data needs to have the same number of predictor and response files")
-
-    is_episodic = len(resp_path) > 1
-
+def load_and_pre_process_data(pred_path: List[str], resp_path: List[str], is_episodic: bool,
+                              downsampling: int) -> Tuple[bool, Any, Any, Any, List[str], List[str]]:
+    """
+    Loads and pre-processes predictor and response data for determination of spiking data and interpolation
+    :param pred_path: Path to predictor data files
+    :param resp_path: Path to response data files
+    :param is_episodic: If true, data is treated as episodic, i.e. each element in pred_path and resp_path
+     identifies one episode
+    :param downsampling: The downsampling factor that should be applied to the data after interpolation
+    :return:
+        [0]: Whether data is spiking data (True) or continuous (False)
+        [1]: The interpolated predictor data
+        [2]: The interpolated response data
+        [3]: The timepoints after interpolation
+        [4]: Predictor names
+        [5]: Response names
+    """
+    # load data from files
     resp_data = None
     pred_data = None
     resp_data_list = None
@@ -452,35 +445,20 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
         resp_data, resp_has_header, resp_header = fh.CSVParser(resp_path[0], "R").load_data()
         pred_data, pred_has_header, pred_header = fh.CSVParser(pred_path[0], "P").load_data()
 
-    # store all output files in a sub-folder of the response file folder - for episodic data we use the first response
-    # file to indicate the storage location, for non-episodic data if response files originate from different locations
-    # the output folders will be placed into those locations
-    output_folder = path.join(path.split(resp_path[0])[0], f"{your_model}")
-    if not path.exists(output_folder):
-        os.makedirs(output_folder)
-    # the names of the output files are derived from the names of the corresponding response files, or in case of
-    # episodic data, from the name of the first response file
-    output_file_name = path.splitext(path.split(resp_path[0])[-1])[0]
-
+    # determine if data is likely spiking data or not
     # We use a very simple heuristic to detect spiking data and we will not allow for mixed data. In other words
     # a response file either contains all continuous data or all spiking data. When in doubt, we will treat as
     # continuous - the same is true for determination across episodes
     if not is_episodic:
         if np.all(np.logical_or(resp_data[:, 1:]==0, resp_data[:, 1:]==1)):
             is_spike_data = True
-            print("Responses are assumed to contain spikes")
         else:
             is_spike_data = False
-            print("Responses are assumed to be continuous values not spikes")
     else:
         is_spike_data = True
         for rda in resp_data_list:
             if not np.all(np.logical_or(rda==0, rda==1)):
                 is_spike_data = False
-        if is_spike_data:
-            print("Responses are assumed to contain spikes")
-        else:
-            print("Responses are assumed to be continuous values not spikes")
 
     # interpolate and if requested downsample data
     if not is_episodic:
@@ -510,6 +488,54 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
                 if ip_time[epix].size < 2:
                     raise MineException(f"The current downsampling factor reduces the data to less than two timepoints"
                                         f" in episode {epix}. Reduce downsampling")
+    return is_spike_data, ip_pred_data, ip_resp_data, ip_time, pred_header, resp_header
+
+
+
+def process_paired_files(resp_path: List[str], pred_path: List[str], configuration: Dict):
+    start_time = datetime.datetime.now()
+
+    your_model = configuration["run"]["model_name"]
+    run_shuffle = configuration["config"]["run_shuffle"]
+    time_as_pred = configuration["config"]["use_time"]
+    history_time = configuration["config"]["history"]
+    taylor_look_fraction = configuration["config"]["taylor_look"]
+    miner_train_fraction = configuration["config"]["miner_train_fraction"]
+    test_score_thresh = configuration["config"]["th_test"]
+    fit_jacobian = configuration["config"]["jacobian"]
+    fit_epochs = configuration["config"]["n_epochs"]
+    miner_verbose = configuration["config"]["miner_verbose"]
+    taylor_sig = configuration["config"]["taylor_sig"]
+    lax_thresh = configuration["config"]["th_lax"]
+    sqr_thresh = configuration["config"]["th_sqr"]
+    taylor_cutoff = configuration["config"]["taylor_cut"]
+    downsampling = configuration["config"]["downsampling"]
+    ignore_mem = configuration["config"]["ignore_memory_warning"]
+
+    if len(resp_path) != len(pred_path):
+        raise ValueError("Episodic data needs to have the same number of predictor and response files")
+
+    is_episodic = len(resp_path) > 1
+
+    # store all output files in a sub-folder of the response file folder - for episodic data we use the first response
+    # file to indicate the storage location, for non-episodic data if response files originate from different locations
+    # the output folders will be placed into those locations
+    output_folder = path.join(path.split(resp_path[0])[0], f"{your_model}")
+    if not path.exists(output_folder):
+        os.makedirs(output_folder)
+    # the names of the output files are derived from the names of the corresponding response files, or in case of
+    # episodic data, from the name of the first response file
+    output_file_name = path.splitext(path.split(resp_path[0])[-1])[0]
+
+    is_spike_data, ip_pred_data, ip_resp_data, ip_time, pred_header, resp_header = load_and_pre_process_data(pred_path,
+                                                                                                             resp_path,
+                                                                                                             is_episodic,
+                                                                                                             downsampling)
+
+    if is_spike_data:
+        print("Responses are assumed to contain spikes")
+    else:
+        print("Responses are assumed to be continuous values not spikes")
 
    # Save interpolated data with chosen column names if verbose flag is set
     if miner_verbose:
