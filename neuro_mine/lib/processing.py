@@ -396,6 +396,16 @@ def mem_threshold_warn(ip_pred_data: Union[List[np.ndarray], np.ndarray], model_
     return False
 
 
+def roll_2d_array(in_array: np.ndarray, rolls: np.ndarray[int]) -> np.ndarray:
+    """
+    Performs different sized circular permutations along axis-1 of a 2D array
+    """
+    out_array = np.empty_like(in_array)
+    for i in range(in_array.shape[0]):
+        out_array[i] = np.roll(in_array[i], rolls[i])
+    return out_array
+
+
 def process_paired_files(resp_path: List[str], pred_path: List[str], configuration: Dict):
     start_time = datetime.datetime.now()
 
@@ -619,9 +629,18 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
     if run_shuffle:
         print("#### RUNNING PERMUTED CONTROL DATA (SHUFFLES) ####", flush=True)
         if not is_episodic:
-            mine_resp_shuff = np.roll(mine_resp, mine_resp.shape[1] // 2, axis=1)
+            roll_max = (mine_resp.shape[
+                            1] * 3) // 4  # maximally permute by circularly moving data forward 3/4 of the length
+            roll_min = mine_resp.shape[1] // 4  # minimally permute by circularly moving data forward 1/4 of the length
+            rolls = np.random.randint(low=roll_min, high=roll_max, size=mine_resp.shape[0])
+            mine_resp_shuff = roll_2d_array(mine_resp, rolls)
         else:
-            mine_resp_shuff = [np.roll(mr, mr.shape[1] // 2, axis=1) for mr in mine_resp]
+            mine_resp_shuff = []
+            for mr in mine_resp:
+                roll_max = (mr.shape[1] * 3) // 4
+                roll_min = mr.shape[1] // 4
+                rolls = np.random.randint(low=roll_min, high=roll_max, size=mr.shape[0])
+                mine_resp_shuff.append(roll_2d_array(mr, rolls))
         with h5py.File(path.join(output_folder, weight_file_name), "a") as weight_file:
             w_grp = weight_file.create_group("fit_shuffled")
             miner = Mine(miner_train_fraction, model_history, test_score_thresh, False, False,
