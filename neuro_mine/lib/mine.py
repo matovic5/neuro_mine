@@ -277,6 +277,9 @@ class Mine:
         self.score_cut = score_cut
         self.verbose = True
         self.fit_spikes = fit_spikes
+        # The following parameters allow users to override hyperparameters of the model in their own custom code
+        self.l2_penalty = None
+        self.learning_rate = None
 
     def _check_inputs(self, pred_data: List[np.ndarray], response_data: np.ndarray, no_std_check=False) -> None:
         """
@@ -314,7 +317,8 @@ class Mine:
         """""
         Generates and initializes model
         """""
-        m = model.get_standard_model(self.model_history, self.fit_spikes)
+        m = model.get_standard_model(self.model_history, self.fit_spikes, learning_rate=self.learning_rate,
+                                     l2_penalty=self.l2_penalty)
         # the following is required to init variables at desired shape
         m(np.random.randn(1, self.model_history, n_predictors).astype(np.float32))
         # save untrained weights to reinitialize model without having to recreate the class which somehow leaks memory
