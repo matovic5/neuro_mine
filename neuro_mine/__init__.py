@@ -5,13 +5,13 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 import logging
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
-from .lib.processing import generate_insights, barcode_cluster_plot, generate_insights_from_file
+from .lib.processing import generate_insights, barcode_cluster_plot, generate_insights_from_file, load_and_pre_process_data, test_metrics_plot, linearity_metrics_plot
 from .lib.mine import Mine, BaseData, MineData, MineSpikingData, MineWarning, MineException
 from .lib.taylorDecomp import dca_dr, d2ca_dr2, taylor_predict, taylor_decompose, data_mean_prediction, complexity_scores
 from .lib.model import ActivityPredictor, train_model, get_standard_model
 from .lib.utilities import (create_overwrite, modelweights_to_hdf5, modelweights_from_hdf5, bootstrap, safe_standardize,
                                 safe_standardize_episodic, barcode_cluster, rearrange_hessian, simulate_response, modified_gram_schmidt, sigmoid,
-                                interp_events, EpisodicData, Data)
+                                interp_events, EpisodicData, Data, compute_autocorr_time)
 
 __all__ = ["Data",
            "EpisodicData",
@@ -20,6 +20,8 @@ __all__ = ["Data",
            "modified_gram_schmidt",
            "simulate_response",
            "rearrange_hessian",
+           "barcode_cluster",
+           "compute_autocorr_time",
            "safe_standardize_episodic",
            "safe_standardize",
            "bootstrap",
@@ -39,6 +41,8 @@ __all__ = ["Data",
            "generate_insights_from_file",
            "load_and_pre_process_data",
            "barcode_cluster_plot",
+           "test_metrics_plot",
+           "linearity_metrics_plot",
            "Mine",
            "BaseData",
            "MineData",

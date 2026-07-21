@@ -28,3 +28,10 @@ def timetrial():
             subprocess.run(["python", str(script_path)] + sys.argv[1:])
         else:
             subprocess.run(["python", str(script_path)])
+
+def data_diag():
+    with importlib.resources.path("neuro_mine.scripts", "data_diagnostics.py") as script_path:
+        if len(sys.argv) > 1:
+            subprocess.run(["python", str(script_path)] + sys.argv[1:])
+        else:
+            subprocess.run(["python", str(script_path)] + ["--help"])
