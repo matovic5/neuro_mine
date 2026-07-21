@@ -87,6 +87,10 @@ if __name__ == '__main__':
 
     file_pairs = fh.pair_files(r_paths, p_paths)
 
+    if len(file_pairs) < 2:
+        # avoids bug in processing single files as episodic data
+        is_episodic = False
+
     config_dict = None
     if args.config is not None:
         if not path.exists(args.config):
