@@ -46,7 +46,11 @@ def plot_pw_corrs(df_corrs: pd.DataFrame) -> pl.Figure:
     Plots pairwise correlations as a heatmap
     """
     fig, ax = pl.subplots()
-    im = ax.matshow(df_corrs, vmin=-1, vmax=1, cmap="managua_r")
+    try:
+        im = ax.matshow(df_corrs, vmin=-1, vmax=1, cmap="managua_r")
+    except ValueError:
+        # managua is only supported from matplotlib version 3.10 onwards
+        im = ax.matshow(df_corrs, vmin=-1, vmax=1, cmap="coolwarm")
     cbar = fig.colorbar(im, ax=ax)
     cbar.set_label("Correlation")
     pl.xticks(range(df_corrs.shape[1]), df_corrs.columns, rotation=80)
