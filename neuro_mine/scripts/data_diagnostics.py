@@ -24,6 +24,9 @@ def plot_auto_corr_times(ac_times_pred: np.ndarray, ac_times_resp: np.ndarray, t
     def times_to_frame(x):
         return x / time_delta
 
+    ac_times_pred = ac_times_pred[np.isfinite(ac_times_pred)]
+    ac_times_resp = ac_times_resp[np.isfinite(ac_times_resp)]
+
     d_min = min([np.min(ac_times_pred), np.min(ac_times_resp)])
     d_max = max([np.max(ac_times_pred), np.max(ac_times_resp)])
     plot_data = [ac_times_pred, ac_times_resp]

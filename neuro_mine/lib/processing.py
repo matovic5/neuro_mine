@@ -492,6 +492,47 @@ def load_and_pre_process_data(pred_path: List[str], resp_path: List[str], is_epi
     return is_spike_data, ip_pred_data, ip_resp_data, ip_time, pred_header, resp_header
 
 
+def standardize_data(ip_pred_data, ip_resp_data, time_as_pred: bool, is_episodic: bool, is_spike_data: bool):
+    """
+    Performs standardization of continuous and episodic data
+    """
+    # perform data-appropriate standardization of predictors and responses
+    # save standardizations for storage
+    if not is_episodic:
+        standardized_predictors, m_pred, s_pred = safe_standardize(ip_pred_data, axis=0)
+        if not time_as_pred:  # remove time column if it is not selected to be included as a predictor
+            standardized_predictors = standardized_predictors[:, 1:]
+            m_pred = m_pred[:, 1:]
+            s_pred = s_pred[:, 1:]
+        mine_pred = [sipd for sipd in standardized_predictors.T]
+        # For responses the time (first) column is always removed since we do not attempt to predict time
+        # Responses do not get standardized if they represent spikes
+        if not is_spike_data:
+            mine_resp, m_resp, s_resp = safe_standardize(ip_resp_data[:, 1:], axis=0)
+            mine_resp = mine_resp.T
+        else:
+            mine_resp = ip_resp_data[:, 1:].T
+            # Since this data is not standardized, we set the subtractive component to 0
+            # and the divisive component to 1
+            m_resp = np.zeros(mine_resp.shape[0])
+            s_resp = np.ones(mine_resp.shape[0])
+    else:  # episodic data - we use one standardization across all episodes but take care to keep episodes separate
+        standardized_predictors, m_pred, s_pred = safe_standardize_episodic(ip_pred_data, axis=0)
+        if not time_as_pred:
+            standardized_predictors = [sp[:, 1:] for sp in standardized_predictors]
+            m_pred = m_pred[:, 1:]
+            s_pred = s_pred[:, 1:]
+        mine_pred = [[sipd for sipd in standardized_predictors[i].T] for i in range(len(standardized_predictors))]
+        if not is_spike_data:
+            mine_resp, m_resp, s_resp = safe_standardize_episodic([ipr[:, 1:] for ipr in ip_resp_data], axis=0)
+            mine_resp = [mr.T for mr in mine_resp]
+        else:
+            mine_resp = [ipr[:, 1:].T for ipr in ip_resp_data]
+            m_resp = np.zeros(mine_resp[0].shape[0])
+            s_resp = np.ones(mine_resp[0].shape[0])
+    return mine_pred, mine_resp, m_pred, s_pred, m_resp, s_resp
+
+
 
 def process_paired_files(resp_path: List[str], pred_path: List[str], configuration: Dict):
     start_time = datetime.datetime.now()
@@ -555,40 +596,8 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
                 df_ip_pred_data.to_csv(path.join(output_folder, f"MINE_{output_file_name}_interpolated_predictors_ep{i:03d}.csv"),
                                        index=False)
 
-    # perform data-appropriate standardization of predictors and responses
-    # save standardizations for storage
-    if not is_episodic:
-        standardized_predictors, m_pred, s_pred = safe_standardize(ip_pred_data, axis=0)
-        if not time_as_pred:  # remove time column if it is not selected to be included as a predictor
-            standardized_predictors = standardized_predictors[:, 1:]
-            m_pred = m_pred[:, 1:]
-            s_pred = s_pred[:, 1:]
-        mine_pred = [sipd for sipd in standardized_predictors.T]
-        # For responses the time (first) column is always removed since we do not attempt to predict time
-        # Responses do not get standardized if they represent spikes
-        if not is_spike_data:
-            mine_resp, m_resp, s_resp = safe_standardize(ip_resp_data[:, 1:], axis=0)
-            mine_resp = mine_resp.T
-        else:
-            mine_resp = ip_resp_data[:, 1:].T
-            # Since this data is not standardized, we set the subtractive component to 0
-            # and the divisive component to 1
-            m_resp = np.zeros(mine_resp.shape[0])
-            s_resp = np.ones(mine_resp.shape[0])
-    else:  # episodic data - we use one standardization across all episodes but take care to keep episodes separate
-        standardized_predictors, m_pred, s_pred = safe_standardize_episodic(ip_pred_data, axis=0)
-        if not time_as_pred:
-            standardized_predictors = [sp[:, 1:] for sp in standardized_predictors]
-            m_pred = m_pred[:, 1:]
-            s_pred = s_pred[:, 1:]
-        mine_pred = [[sipd for sipd in standardized_predictors[i].T] for i in range(len(standardized_predictors))]
-        if not is_spike_data:
-            mine_resp, m_resp, s_resp = safe_standardize_episodic([ipr[:, 1:] for ipr in ip_resp_data], axis=0)
-            mine_resp = [mr.T for mr in mine_resp]
-        else:
-            mine_resp = [ipr[:, 1:].T for ipr in ip_resp_data]
-            m_resp = np.zeros(mine_resp[0].shape[0])
-            s_resp = np.ones(mine_resp[0].shape[0])
+    mine_pred, mine_resp, m_pred, s_pred, m_resp, s_resp = standardize_data(ip_pred_data, ip_resp_data, time_as_pred,
+                                                                            is_episodic, is_spike_data)
 
     if not is_episodic:
         configuration["run"]["interpolation_time_delta"] = np.mean(np.diff(ip_time))
