@@ -19,6 +19,28 @@ class ConfigException(Exception):
         super().__init__(message)
 
 
+def add_common_args(ap: argparse.ArgumentParser):
+    ap.add_argument("-p", "--predictors", help="Path to CSV files of predictors or alternatively "
+                                                     "directory with predictor files.",
+                          type=str, required=True, nargs='+')
+    ap.add_argument("-r", "--responses", help="Path to CSV files of responses or alternatively "
+                                                    "directory with response files.",
+                          type=str, required=True, nargs='+')
+    ap.add_argument("-ut", "--use_time", help="If set time will be used as one predictor.",
+                          action='store_true')
+    ap.add_argument("-n", "--model_name", help="Name of model for file saving purposes.", type=str)
+    ap.add_argument("-mh", "--history", help="The length of model history in time units.",
+                          type=float, default=default_options['history'])
+    ap.add_argument("-o", "--config", help="Path to config file with run parameters.", type=str, default=None)
+    ap.add_argument("-mtf", "--miner_train_fraction", help="The fraction of data to use for training",
+                          type=float, default=default_options['miner_train_fraction'])
+    ap.add_argument("-eps", "--episodic", help="If set data is assumed to be episodic with one "
+                                                     "predictor and one response file per episode.",
+                          action="store_true")
+    ap.add_argument("-dsf", "--downsampling", help="The downsampling factor",
+                          type=int, default=default_options['downsampling'])
+
+
 if __name__ == '__main__':
 
     # the following will prevent tensorflow from using the GPU - as the used models have very low complexity
@@ -29,14 +51,7 @@ if __name__ == '__main__':
     a_parser = argparse.ArgumentParser(prog="Mine",
                                        description="Uses MINE to fit and interpret CNN models that relate predictors"
                                                    "identified by one CSV file to responses identified by another.")
-    a_parser.add_argument("-p", "--predictors", help="Path to CSV files of predictors or alternatively "
-                                                     "directory with predictor files.",
-                          type=str, required=True, nargs='+')
-    a_parser.add_argument("-r", "--responses", help="Path to CSV files of responses or alternatively "
-                                                    "directory with response files.",
-                          type=str, required=True, nargs='+')
-    a_parser.add_argument("-ut", "--use_time", help="If set time will be used as one predictor.",
-                          action='store_true')
+    add_common_args(a_parser)
     a_parser.add_argument("-sh", "--run_shuffle", help="If set shuffled controls will be run as well.",
                           action='store_true')
     a_parser.add_argument("-ct", "--th_test", help="The test score threshold to "
@@ -53,28 +68,17 @@ if __name__ == '__main__':
     a_parser.add_argument("-lsq", "--th_sqr", help="The threshold of variance explained by the 2nd order"
                                                   "approximation to consider the fit 2nd order.",
                           type=float, default=default_options['th_sqr'])
-    a_parser.add_argument("-n", "--model_name", help="Name of model for file saving purposes.", type=str)
-    a_parser.add_argument("-mh", "--history", help="The length of model history in time units.",
-                          type=float, default=default_options['history'])
     a_parser.add_argument("-tl", "--taylor_look", help="Determines taylor look ahead as multiplier of history",
                           type=float, default=default_options['taylor_look'])
     a_parser.add_argument("-j", "--jacobian", help="Store the Jacobians (linear receptive fields) for each response.",
                           action='store_true')
-    a_parser.add_argument("-o", "--config", help="Path to config file with run parameters.", type=str, default=None)
     a_parser.add_argument("-e", "--n_epochs", help="Number of epochs when fitting model.", type=int,
                           default=default_options['n_epochs'])
     a_parser.add_argument("-mq","--miner_quiet", help="Do not receive updates on model fitting in command line",
                           action='store_true')
-    a_parser.add_argument("-mtf", "--miner_train_fraction", help="The fraction of data to use for training",
-                          type=float, default=default_options['miner_train_fraction'])
-    a_parser.add_argument("-eps", "--episodic", help="If set data is assumed to be episodic with one "
-                                                     "predictor and one response file per episode.",
-                          action="store_true")
     a_parser.add_argument("-imw", "--ignore_mem", help="If set, memory warning for data will be ignored "
                                                        "otherwise program will stop if memory might be insufficient.",
                           action="store_true")
-    a_parser.add_argument("-dsf", "--downsampling", help="The downsampling factor",
-                          type=int, default=default_options['downsampling'])
 
     args = a_parser.parse_args()
 

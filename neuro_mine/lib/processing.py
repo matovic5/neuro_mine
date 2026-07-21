@@ -336,7 +336,8 @@ def test_metrics_plot(mdata: Union[MineData, MineSpikingData], mdata_shuff: Unio
     axes[1].plot(c_thresholds, fdr)
     axes[1].plot([test_score_thresh, test_score_thresh], [0, 1], 'k--')
     axes[1].set_xlim(0, 1)
-    axes[1].set_ylim(0, 1)
+    axes[1].set_ylim(-0.01, 1)
+    axes[1].set_yticks([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
     axes[1].set_xlabel(f"Test {metric_label} cutoff")
     axes[1].set_ylabel("False discovery rate")
     fig.tight_layout()
@@ -768,6 +769,52 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
         json.dump(configuration, config_file, indent=2)
     # Print elapsed time to command line
     print(f"#### Analysis completed in {elapsed}. ####", flush=True)
+
+
+def generate_train_curve(resp_path: List[str], pred_path: List[str], configuration: Dict):
+    start_time = datetime.datetime.now()
+
+    your_model = configuration["run"]["model_name"]
+    run_shuffle = configuration["config"]["run_shuffle"]
+    time_as_pred = configuration["config"]["use_time"]
+    history_time = configuration["config"]["history"]
+    taylor_look_fraction = configuration["config"]["taylor_look"]
+    miner_train_fraction = configuration["config"]["miner_train_fraction"]
+    test_score_thresh = configuration["config"]["th_test"]
+    fit_jacobian = configuration["config"]["jacobian"]
+    fit_epochs = configuration["config"]["n_epochs"]
+    miner_verbose = configuration["config"]["miner_verbose"]
+    taylor_sig = configuration["config"]["taylor_sig"]
+    lax_thresh = configuration["config"]["th_lax"]
+    sqr_thresh = configuration["config"]["th_sqr"]
+    taylor_cutoff = configuration["config"]["taylor_cut"]
+    downsampling = configuration["config"]["downsampling"]
+    ignore_mem = configuration["config"]["ignore_memory_warning"]
+
+    if len(resp_path) != len(pred_path):
+        raise ValueError("Episodic data needs to have the same number of predictor and response files")
+
+    is_episodic = len(resp_path) > 1
+
+    # store all output files in a sub-folder of the response file folder - for episodic data we use the first response
+    # file to indicate the storage location, for non-episodic data if response files originate from different locations
+    # the output folders will be placed into those locations
+    output_folder = path.join(path.split(resp_path[0])[0], f"{your_model}")
+    if not path.exists(output_folder):
+        os.makedirs(output_folder)
+    # the names of the output files are derived from the names of the corresponding response files, or in case of
+    # episodic data, from the name of the first response file
+    output_file_name = path.splitext(path.split(resp_path[0])[-1])[0]
+
+    is_spike_data, ip_pred_data, ip_resp_data, ip_time, pred_header, resp_header = load_and_pre_process_data(pred_path,
+                                                                                                             resp_path,
+                                                                                                             is_episodic,
+                                                                                                             downsampling)
+
+    if is_spike_data:
+        print("Responses are assumed to contain spikes")
+    else:
+        print("Responses are assumed to be continuous values not spikes")
 
 
 if __name__ == '__main__':

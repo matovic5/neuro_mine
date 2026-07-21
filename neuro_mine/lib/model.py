@@ -276,15 +276,24 @@ def train_model(mdl: ActivityPredictor, tset: tf.data.Dataset, n_epochs: int, da
             mdl.perform_training_step(inp, outp)
 
 
-def get_standard_model(hist_steps: int, predict_spikes: bool) -> ActivityPredictor:
+def get_standard_model(hist_steps: int, predict_spikes: bool, learning_rate: Optional[float]=None,
+                       l2_penalty: Optional[float]=None) -> ActivityPredictor:
     """
     Creates and returns an activity predictor instance with standard parameters
     found through a hyperparameter search
     :param hist_steps: The number of history steps in the model
     :param predict_spikes: If true, 0/1 spike data instead of continuous data is expected
+    :param learning_rate: The learning rate, if None standard will be used
+    :param l2_penalty: The l2 penalty, if None standard will be used
     """
     m = ActivityPredictor(64, 80, 0.5, hist_steps, "swish", predict_spikes)
-    m.learning_rate = 1e-3
-    m.l2_sparsity = 1e-3
+    if learning_rate is None:
+        m.learning_rate = 1e-3
+    else:
+        m.learning_rate = learning_rate
+    if l2_penalty is None:
+        m.l2_sparsity = 1e-3
+    else:
+        m.l2_sparsity = l2_penalty
     m.setup()
     return m
