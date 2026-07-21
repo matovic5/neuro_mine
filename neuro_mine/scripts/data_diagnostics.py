@@ -137,7 +137,7 @@ def process_single(p_file: str, r_file: str, output_dir: str):
 
 if __name__ == '__main__':
 
-    a_parser = argparse.ArgumentParser(prog="Pre-analysis",
+    a_parser = argparse.ArgumentParser(prog="Data-diagnostic",
                                        description="Reports key-characteristics of input data to guide decisions about"
                                                    " potential downsampling of data or orthogonalization of predictors.")
     a_parser.add_argument("-p", "--predictors", help="Path to CSV files of predictors or alternatively "
