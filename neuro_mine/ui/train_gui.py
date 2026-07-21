@@ -315,7 +315,9 @@ class Mine_App(QWidget, Ui_Form):
 
     @staticmethod
     def message(s, error=False):
-        if "WARNING: All log messages" in s:
+        # aggressively filter out warnings that are sent to standard error because tensorflow does not know
+        # how to initialize abseil
+        if "WARNING:" in s or "XLA" in s:
             return
         if error:
             print('\033[91m' + s + '\033[0m')

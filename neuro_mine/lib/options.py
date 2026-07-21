@@ -16,4 +16,5 @@ default_options = {
     "miner_train_fraction": 0.8,
     "episodic": False,
     "downsampling": 1,
+    "ignore_memory_warning": False,
 }

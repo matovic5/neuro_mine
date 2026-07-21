@@ -48,6 +48,68 @@ class BaseData:
         if self.hessians is not None:
             utilities.create_overwrite(file_object, "hessians", self.hessians, overwrite)
 
+    @staticmethod
+    def from_hdf5(file_object: Union[h5py.File, h5py.Group]):
+        if "taylor_scores" in file_object:
+            taylor_scores = file_object["taylor_scores"][()]
+            taylor_true_change = file_object["taylor_true_change"][()]
+            taylor_full_prediction = file_object["taylor_full_prediction"][()]
+            taylor_by_predictor = file_object["taylor_by_predictor"][()]
+        else:
+            taylor_scores = None
+            taylor_true_change = None
+            taylor_full_prediction = None
+            taylor_by_predictor = None
+        if "model_lin_approx_scores" in file_object:
+            model_lin_approx_scores = file_object["model_lin_approx_scores"][()]
+        else:
+            model_lin_approx_scores = None
+        if "model_2nd_approx_scores" in file_object:
+            model_2nd_approx_scores = file_object["model_2nd_approx_scores"][()]
+        else:
+            model_2nd_approx_scores = None
+        if "jacobians" in file_object:
+            jacobians = file_object["jacobians"][()]
+        else:
+            jacobians = None
+        if "hessians" in file_object:
+            hessians = file_object["hessians"][()]
+        else:
+            hessians = None
+        if "correlations_trained" in file_object:
+            # this is a MinData object
+            correlations_trained = file_object["correlations_trained"][()]
+            correlations_test = file_object["correlations_test"][()]
+            return MineData(
+                taylor_scores=taylor_scores,
+                taylor_true_change=taylor_true_change,
+                taylor_full_prediction=taylor_full_prediction,
+                taylor_by_predictor=taylor_by_predictor,
+                model_lin_approx_scores=model_lin_approx_scores,
+                model_2nd_approx_scores=model_2nd_approx_scores,
+                jacobians=jacobians,
+                hessians=hessians,
+                correlations_trained=correlations_trained,
+                correlations_test=correlations_test
+            )
+        else:
+            # this is MineSpikingData object
+            roc_auc_trained = file_object["roc_auc_trained"][()]
+            roc_auc_test = file_object["roc_auc_test"][()]
+            return MineSpikingData(
+                taylor_scores=taylor_scores,
+                taylor_true_change=taylor_true_change,
+                taylor_full_prediction=taylor_full_prediction,
+                taylor_by_predictor=taylor_by_predictor,
+                model_lin_approx_scores=model_lin_approx_scores,
+                model_2nd_approx_scores=model_2nd_approx_scores,
+                jacobians=jacobians,
+                hessians=hessians,
+                roc_auc_trained=roc_auc_trained,
+                roc_auc_test=roc_auc_test
+            )
+
+
 @dataclass(frozen=True)
 class MineData(BaseData):
     """Class for the return values of MINE"""

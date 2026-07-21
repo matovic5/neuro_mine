@@ -14,6 +14,7 @@ import tensorflow as tf
 tf.get_logger().setLevel("ERROR")
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
+import pandas as pd
 
 
 def create_overwrite(storage: Union[h5py.File, h5py.Group], name: str, data: Any, overwrite: bool,
@@ -299,6 +300,60 @@ def interp_events(x: np.ndarray, xp: np.ndarray, fp: np.ndarray) -> np.ndarray:
               f" more than one spike")
     f[f > 1] = 1
     return f
+
+
+def compute_autocorr_time(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Computes autocorrelation time according to Thompson, 2010 (http://arxiv.org/abs/1011.0175) for each column in
+    a timeseries pandas DataFrame as the time where the autocorrelation drops below 1/e
+    :param df: Dataframe containing timeseries data
+    :return: Dataframe of autocorrelation times
+    """
+    # in large parts generated using Google Gemini
+    def _single_col_act(series):
+        # Drop NaNs to ensure contiguous array
+        x = series.dropna().values
+        n = len(x)
+
+        if n < 2:
+            return np.nan
+
+        # Mean center the data
+        x = x - np.mean(x)
+
+        # Compute autocorrelation via FFT
+        # Pad to 2*n to prevent circular convolution artifacts
+        f = np.fft.fft(x, n=2 * n)
+        acf = np.fft.ifft(f * np.conjugate(f))[:n].real
+
+        # Normalize (variance is acf[0])
+        if acf[0] == 0:
+            return np.nan
+        acf /= acf[0]
+
+        threshold = 1.0 / np.e
+
+        # Find where ACF drops below 1/e
+        for i in range(1, n):
+            if acf[i] < threshold:
+                # Linearly interpolate between lag (i-1) and lag i for a precise float
+                y1 = acf[i - 1]
+                y2 = acf[i]
+
+                if y1 == y2:  # Prevent division by zero
+                    return float(i)
+
+                tau = (i - 1) + (threshold - y1) / (y2 - y1)
+                return tau
+
+        # Return NaN if the ACF never drops below 1/e in the given sample
+        return np.nan
+
+    # Calculate for each column and pack into a 1-row dictionary
+    taus = {col: [_single_col_act(df[col])] for col in df.columns}
+
+    # Return as a DataFrame
+    return pd.DataFrame(taus, index=["Autocorrelation time [Timepoints]"])
 
 
 _shuffle_buffer_size = 1000  # limit dataset shuffle buffer to 1000 rows
