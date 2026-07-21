@@ -35,11 +35,11 @@ def plot_auto_corr_times(ac_times_pred: np.ndarray, ac_times_resp: np.ndarray, t
     ax.boxplot(plot_data)
     ax.set_xticks([1, 2], plot_labels)
     ax.set_ylabel("Autocorrelation time [Timepoints]")
-    secax = ax.secondary_yaxis("right", functions=(frames_to_time, times_to_frame))
-    secax.set_ylabel("Autocorrelation time [s]")
     if d_min * 10 < d_max:
         # select logarithmic axis scale if range is larger than 10-fold
-        pl.yscale("log")
+        ax.set_yscale("log")
+    secax = ax.secondary_yaxis("right", functions=(frames_to_time, times_to_frame))
+    secax.set_ylabel("Autocorrelation time [s]")
     fig.tight_layout()
     return fig
 
