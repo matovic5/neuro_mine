@@ -3,7 +3,7 @@ Module for easy running of MINE on user data
 """
 import h5py
 import numpy as np
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Dict, Tuple
 from neuro_mine.lib import utilities
 from neuro_mine.lib import model
 from neuro_mine.lib.taylorDecomp import taylor_decompose, d2ca_dr2, complexity_scores, data_mean_prediction
@@ -24,6 +24,7 @@ class BaseData:
     model_2nd_approx_scores: Optional[np.ndarray]
     jacobians: Optional[np.ndarray]
     hessians: Optional[np.ndarray]
+    train_progress_data: Optional[Dict]
 
     def save_to_hdf5(self, file_object: Union[h5py.File, h5py.Group], overwrite=False) -> None:
         """
@@ -47,6 +48,13 @@ class BaseData:
             utilities.create_overwrite(file_object, "jacobians", self.jacobians, overwrite)
         if self.hessians is not None:
             utilities.create_overwrite(file_object, "hessians", self.hessians, overwrite)
+        if self.train_progress_data is not None:
+            utilities.create_overwrite(file_object, "train_score_curve",
+                                       self.train_progress_data["train_score_curve"], overwrite)
+            utilities.create_overwrite(file_object, "test_score_curve",
+                                       self.train_progress_data["test_score_curve"], overwrite)
+            utilities.create_overwrite(file_object, "cumulative_epochs",
+                                       self.train_progress_data["cumulative_epochs"], overwrite)
 
     @staticmethod
     def from_hdf5(file_object: Union[h5py.File, h5py.Group]):
@@ -76,8 +84,17 @@ class BaseData:
             hessians = file_object["hessians"][()]
         else:
             hessians = None
+        # load training progress data if it was generated
+        if "train_score_curve" in file_object:
+            train_progress_data = {
+                "train_score_curve": file_object["train_score_curve"][()],
+                "test_score_curve": file_object["test_score_curve"][()],
+                "cumulative_epochs": file_object["cumulative_epochs"][()],
+            }
+        else:
+            train_progress_data = None
         if "correlations_trained" in file_object:
-            # this is a MinData object
+            # this is a MineData object
             correlations_trained = file_object["correlations_trained"][()]
             correlations_test = file_object["correlations_test"][()]
             return MineData(
@@ -90,7 +107,8 @@ class BaseData:
                 jacobians=jacobians,
                 hessians=hessians,
                 correlations_trained=correlations_trained,
-                correlations_test=correlations_test
+                correlations_test=correlations_test,
+                train_progress_data=train_progress_data
             )
         else:
             # this is MineSpikingData object
@@ -106,7 +124,8 @@ class BaseData:
                 jacobians=jacobians,
                 hessians=hessians,
                 roc_auc_trained=roc_auc_trained,
-                roc_auc_test=roc_auc_test
+                roc_auc_test=roc_auc_test,
+                train_progress_data=train_progress_data,
             )
 
 
@@ -150,7 +169,7 @@ class _Outputs:
     """
 
     def __init__(self, compute_taylor: bool, return_jacobians: bool, return_hessians: bool, n_responses: int,
-                 n_predictors: int, model_history: int):
+                 n_predictors: int, model_history: int, train_progress: bool):
         """
         Generate a new output collection
         :param compute_taylor: Indicates if Taylor analysis will be performed
@@ -159,6 +178,7 @@ class _Outputs:
         :param n_responses: The total number of responses to fit
         :param n_predictors: The total number of predictors to use
         :param model_history: The model historyn length
+        :param train_progress: Indicates if training and test error curves should be generated
         """
         # calculate number of taylor components
         n_taylor = (n_predictors ** 2 - n_predictors) // 2 + n_predictors
@@ -187,8 +207,19 @@ class _Outputs:
                                          model_history * n_predictors), np.nan)
         else:
             self.all_hessians = None
+        if train_progress:
+            self.train_progress_data = {
+                "train_score_curve": [],
+                "test_score_curve": [],
+                "cumulative_epochs": None,
+            }
+        else:
+            self.train_progress_data = None
 
     def to_mine_data(self, spiking: bool) -> Union[MineSpikingData, MineData]:
+        if self.train_progress_data is not None:
+            self.train_progress_data["train_score_curve"] = np.vstack(self.train_progress_data["train_score_curve"])
+            self.train_progress_data["test_score_curve"] = np.vstack(self.train_progress_data["test_score_curve"])
         if spiking:
             return MineSpikingData(
                 roc_auc_test=self.scores_test,
@@ -200,7 +231,8 @@ class _Outputs:
                 model_lin_approx_scores=self.lin_approx_scores,
                 model_2nd_approx_scores=self.me_scores,
                 jacobians=self.all_jacobians,
-                hessians=self.all_hessians
+                hessians=self.all_hessians,
+                train_progress_data=self.train_progress_data
             )
         else:
             return MineData(
@@ -213,7 +245,8 @@ class _Outputs:
                 model_lin_approx_scores=self.lin_approx_scores,
                 model_2nd_approx_scores=self.me_scores,
                 jacobians=self.all_jacobians,
-                hessians=self.all_hessians
+                hessians=self.all_hessians,
+                train_progress_data=self.train_progress_data
             )
 
 
@@ -280,6 +313,9 @@ class Mine:
         # The following parameters allow users to override hyperparameters of the model in their own custom code
         self.l2_penalty = None
         self.learning_rate = None
+        # If the following parameter is set to true, data analysis will generate training and test correlation curves
+        # across epoch steps for evaluation of epochs to run
+        self.train_progress = False
 
     def _check_inputs(self, pred_data: List[np.ndarray], response_data: np.ndarray, no_std_check=False) -> None:
         """
@@ -325,6 +361,46 @@ class Mine:
         init_weights = m.get_weights()
         return m, init_weights
 
+    def _gen_epoch_steps(self) -> List[int]:
+        """
+        Generate logarithmic training scale up to the requested maximum
+        """
+        train_epochs = []
+        current_sum = 0
+        while current_sum < self.n_epochs:
+            if current_sum > 0:
+                step_size = 10 ** (int(np.log10(current_sum)))
+            else:
+                step_size = 1
+            if current_sum + step_size > self.n_epochs:
+                step_size = self.n_epochs - current_sum
+                train_epochs.append(step_size)
+                break
+            train_epochs.append(step_size)
+            current_sum += step_size
+        assert np.sum(train_epochs) == self.n_epochs
+        return train_epochs
+
+    @staticmethod
+    def _episodic_scores(ep_predictions, train_ep: int, score_function: callable) -> Tuple[float, float]:
+        # Compute score on train data fraction
+        p_train, r_train = [], []
+        for epp in ep_predictions[:train_ep]:
+            p_train.append(epp[0])
+            r_train.append(epp[1])
+        p_train = np.hstack(p_train)
+        r_train = np.hstack(r_train)
+        c_tr = score_function(p_train, r_train)
+        # Compute score on test data fraction
+        p_test, r_test = [], []
+        for epp in ep_predictions[train_ep:]:
+            p_test.append(epp[0])
+            r_test.append(epp[1])
+        p_test = np.hstack(p_test)
+        r_test = np.hstack(r_test)
+        c_ts = score_function(p_test, r_test)
+        return c_tr, c_ts
+
     def analyze_episodic(self, pred_data: List[List[np.ndarray]],
                          response_data: List[np.ndarray]) -> Union[MineSpikingData, MineData]:
         if len(pred_data) != len(response_data):
@@ -363,9 +439,11 @@ class Mine:
 
         # define our outputs
         outs = _Outputs(self.compute_taylor, self.return_jacobians, self.return_hessians, n_responses,
-                        n_predictors, self.model_history)
+                        n_predictors, self.model_history, self.train_progress)
 
         ep_data = utilities.EpisodicData(self.model_history, pred_data, response_data, train_ep)
+        epoch_sets = self._gen_epoch_steps()
+        cum_epochs = np.cumsum(epoch_sets)
         # create model once
         m, init_weights = self._create_init_model(n_predictors)
         for cell_ix in range(n_responses):
@@ -375,27 +453,31 @@ class Mine:
             # the following appears to be required to re-init variables?
             m(np.random.randn(1, self.model_history, n_predictors).astype(np.float32))
             # train
-            model.train_model(m, tset, self.n_epochs, 0)
+            if self.train_progress:
+                # Train in episode sets to obtain curves of train and test error progression
+                if outs.train_progress_data["cumulative_epochs"] is None:
+                    outs.train_progress_data["cumulative_epochs"] = np.cumsum(cum_epochs)
+                train_curve = np.full(cum_epochs.size, np.nan)
+                test_curve = train_curve.copy()
+                for i, ecount in enumerate(epoch_sets):
+                    model.train_model(m, tset, ecount, 0)
+                    ep_predictions = ep_data.predict_response(cell_ix, m)
+                    c_tr, c_ts = self._episodic_scores(ep_predictions, train_ep, score_function)
+                    train_curve[i] = c_tr
+                    test_curve[i] = c_ts
+                outs.train_progress_data["train_score_curve"].append(train_curve)
+                outs.train_progress_data["test_score_curve"].append(test_curve)
+            else:
+                # train in one fell swoop
+                model.train_model(m, tset, self.n_epochs, 0)
+            # save final weights
             if self.model_weight_store is not None:
                 w_group = self.model_weight_store.create_group(f"cell_{cell_ix}_weights")
                 utilities.modelweights_to_hdf5(w_group, m.get_weights())
-            # evaluate
+            # evaluate final model
             ep_predictions = ep_data.predict_response(cell_ix, m)
-            p_train, r_train = [], []
-            for epp in ep_predictions[:train_ep]:
-                p_train.append(epp[0])
-                r_train.append(epp[1])
-            p_train = np.hstack(p_train)
-            r_train = np.hstack(r_train)
-            c_tr = score_function(p_train, r_train)
+            c_tr, c_ts = self._episodic_scores(ep_predictions, train_ep, score_function)
             outs.scores_trained[cell_ix] = c_tr
-            p_test, r_test = [], []
-            for epp in ep_predictions[train_ep:]:
-                p_test.append(epp[0])
-                r_test.append(epp[1])
-            p_test = np.hstack(p_test)
-            r_test = np.hstack(r_test)
-            c_ts = score_function(p_test, r_test)
             outs.scores_test[cell_ix] = c_ts
             # if the cell doesn't have a test score of at least score_cut we skip the rest
             # NOTE: This means that some return values will only have one entry for each unit
@@ -532,9 +614,11 @@ class Mine:
 
         # define our outputs
         outs = _Outputs(self.compute_taylor, self.return_jacobians, self.return_hessians, response_data.shape[0],
-                        n_predictors, self.model_history)
+                        n_predictors, self.model_history, self.train_progress)
 
         data_obj = utilities.Data(self.model_history, pred_data, response_data, train_frames)
+        epoch_sets = self._gen_epoch_steps()
+        cum_epochs = np.cumsum(epoch_sets)
         # create model once
         m, init_weights = self._create_init_model(n_predictors)
         for cell_ix in range(n_responses):
@@ -544,11 +628,29 @@ class Mine:
             # the following appears to be required to re-init variables?
             m(np.random.randn(1, self.model_history, n_predictors).astype(np.float32))
             # train
-            model.train_model(m, tset, self.n_epochs, 0)
+            if self.train_progress:
+                # Train in episode sets to obtain curves of train and test error progression
+                if outs.train_progress_data["cumulative_epochs"] is None:
+                    outs.train_progress_data["cumulative_epochs"] = cum_epochs
+                train_curve = np.full(cum_epochs.size, np.nan)
+                test_curve = train_curve.copy()
+                for i, ecount in enumerate(epoch_sets):
+                    model.train_model(m, tset, ecount, 0)
+                    p, r = data_obj.predict_response(cell_ix, m)
+                    c_tr = score_function(p[:train_frames], r[:train_frames])
+                    c_ts = score_function(p[train_frames:], r[train_frames:])
+                    train_curve[i] = c_tr
+                    test_curve[i] = c_ts
+                outs.train_progress_data["train_score_curve"].append(train_curve)
+                outs.train_progress_data["test_score_curve"].append(test_curve)
+            else:
+                # train in one fell swoop
+                model.train_model(m, tset, self.n_epochs, 0)
+            # save final weights
             if self.model_weight_store is not None:
                 w_group = self.model_weight_store.create_group(f"cell_{cell_ix}_weights")
                 utilities.modelweights_to_hdf5(w_group, m.get_weights())
-            # evaluate
+            # evaluate final model
             p, r = data_obj.predict_response(cell_ix, m)
             c_tr = score_function(p[:train_frames], r[:train_frames])
             outs.scores_trained[cell_ix] = c_tr

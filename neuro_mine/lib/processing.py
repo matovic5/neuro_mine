@@ -4,8 +4,6 @@ import pandas as pd
 from os import path
 import os
 import h5py
-from tensorflow.python.ops.metrics_impl import true_positives
-
 from neuro_mine.lib import file_handling as fh
 import json
 from neuro_mine.lib.utilities import safe_standardize, interp_events, safe_standardize_episodic
@@ -343,6 +341,28 @@ def test_metrics_plot(mdata: Union[MineData, MineSpikingData], mdata_shuff: Unio
     fig.tight_layout()
     return fig
 
+def train_curve_plot(mdata: Union[MineData, MineSpikingData]) -> pl.figure:
+    """
+    Plots training and test score curves across epochs to allow judging best number of epochs.
+    :param mdata: The Mine result data from a fit or reinstantiated from an analysis file
+    :return: Figure object
+    """
+    count = float(mdata.train_progress_data["train_score_curve"].shape[0])
+    m_train = np.mean(mdata.train_progress_data["train_score_curve"], axis=0)
+    std_train = np.std(mdata.train_progress_data["train_score_curve"], axis=0) / np.sqrt(count)
+    m_test = np.mean(mdata.train_progress_data["test_score_curve"], axis=0)
+    std_test = np.std(mdata.train_progress_data["test_score_curve"], axis=0) / np.sqrt(count)
+    x = mdata.train_progress_data["cumulative_epochs"]
+    fig = pl.figure()
+    pl.fill_between(x, m_train-std_train, m_train+std_train, color="C0", alpha=0.3)
+    pl.plot(x, m_train, color="C0", label="Training")
+    pl.fill_between(x, m_test - std_test, m_test + std_test, color="C1", alpha=0.3)
+    pl.plot(x, m_test, color="C1", label="Test")
+    pl.legend()
+    pl.xlabel("Epochs")
+    pl.ylabel("Score +/- se")
+    return fig
+
 
 def time_from_index(ix: int, model_history: int, ip_rate: float) -> float:
     """
@@ -553,6 +573,7 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
     taylor_cutoff = configuration["config"]["taylor_cut"]
     downsampling = configuration["config"]["downsampling"]
     ignore_mem = configuration["config"]["ignore_memory_warning"]
+    train_progress = configuration["config"]["train_progress"]
 
     if len(resp_path) != len(pred_path):
         raise ValueError("Episodic data needs to have the same number of predictor and response files")
@@ -579,7 +600,7 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
     else:
         print("Responses are assumed to be continuous values not spikes")
 
-   # Save interpolated data with chosen column names if verbose flag is set
+    # Save interpolated data with chosen column names if verbose flag is set
     if miner_verbose:
         if not is_episodic:
             df_ip_resp_data = pd.DataFrame(ip_resp_data, columns=resp_header)
@@ -649,6 +670,7 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
         w_grp = weight_file.create_group("fit")
         miner = Mine(miner_train_fraction, model_history, test_score_thresh, True, fit_jacobian,
                      taylor_look_ahead, taylor_pred_every, fit_spikes=is_spike_data)
+        miner.train_progress = train_progress
         miner.n_epochs = fit_epochs
         miner.verbose = miner_verbose
         miner.model_weight_store = w_grp
@@ -763,6 +785,10 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
         fig = test_metrics_plot(mdata, mdata_shuff, test_score_thresh)
         fig.savefig(path.join(output_folder, f"MINE_{output_file_name}_TestMetrics.pdf"))
 
+    if train_progress:
+        fig = train_curve_plot(mdata)
+        fig.savefig(path.join(output_folder, f"MINE_{output_file_name}_TrainCurve.pdf"))
+
     # plot linearity metrics and thresholds
     if np.any(model_scores >= test_score_thresh):
         fig = linearity_metrics_plot(mdata, lax_thresh, sqr_thresh)
@@ -778,52 +804,6 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
         json.dump(configuration, config_file, indent=2)
     # Print elapsed time to command line
     print(f"#### Analysis completed in {elapsed}. ####", flush=True)
-
-
-def generate_train_curve(resp_path: List[str], pred_path: List[str], configuration: Dict):
-    start_time = datetime.datetime.now()
-
-    your_model = configuration["run"]["model_name"]
-    run_shuffle = configuration["config"]["run_shuffle"]
-    time_as_pred = configuration["config"]["use_time"]
-    history_time = configuration["config"]["history"]
-    taylor_look_fraction = configuration["config"]["taylor_look"]
-    miner_train_fraction = configuration["config"]["miner_train_fraction"]
-    test_score_thresh = configuration["config"]["th_test"]
-    fit_jacobian = configuration["config"]["jacobian"]
-    fit_epochs = configuration["config"]["n_epochs"]
-    miner_verbose = configuration["config"]["miner_verbose"]
-    taylor_sig = configuration["config"]["taylor_sig"]
-    lax_thresh = configuration["config"]["th_lax"]
-    sqr_thresh = configuration["config"]["th_sqr"]
-    taylor_cutoff = configuration["config"]["taylor_cut"]
-    downsampling = configuration["config"]["downsampling"]
-    ignore_mem = configuration["config"]["ignore_memory_warning"]
-
-    if len(resp_path) != len(pred_path):
-        raise ValueError("Episodic data needs to have the same number of predictor and response files")
-
-    is_episodic = len(resp_path) > 1
-
-    # store all output files in a sub-folder of the response file folder - for episodic data we use the first response
-    # file to indicate the storage location, for non-episodic data if response files originate from different locations
-    # the output folders will be placed into those locations
-    output_folder = path.join(path.split(resp_path[0])[0], f"{your_model}")
-    if not path.exists(output_folder):
-        os.makedirs(output_folder)
-    # the names of the output files are derived from the names of the corresponding response files, or in case of
-    # episodic data, from the name of the first response file
-    output_file_name = path.splitext(path.split(resp_path[0])[-1])[0]
-
-    is_spike_data, ip_pred_data, ip_resp_data, ip_time, pred_header, resp_header = load_and_pre_process_data(pred_path,
-                                                                                                             resp_path,
-                                                                                                             is_episodic,
-                                                                                                             downsampling)
-
-    if is_spike_data:
-        print("Responses are assumed to contain spikes")
-    else:
-        print("Responses are assumed to be continuous values not spikes")
 
 
 if __name__ == '__main__':
