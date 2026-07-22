@@ -581,7 +581,7 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
     # store all output files in a sub-folder of the response file folder - for episodic data we use the first response
     # file to indicate the storage location, for non-episodic data if response files originate from different locations
     # the output folders will be placed into those locations
-    output_folder = configuration["run"]["out_dir"]
+    output_folder = configuration["run"]["outdir"]
     # the names of the output files are derived from the names of the corresponding response files, or in case of
     # episodic data, from the name of the first response file
     output_file_name = path.splitext(path.split(resp_path[0])[-1])[0]
