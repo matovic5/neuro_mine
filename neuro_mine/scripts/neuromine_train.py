@@ -79,12 +79,17 @@ if __name__ == '__main__':
     a_parser.add_argument("-imw", "--ignore_mem", help="If set, memory warning for data will be ignored "
                                                        "otherwise program will stop if memory might be insufficient.",
                           action="store_true")
+    a_parser.add_argument("-z", "--train_progress", help="If set, training progress across episodes will"
+                                                         " be saved and plotted.",
+                          action="store_true")
 
     args = a_parser.parse_args()
 
     is_episodic = args.episodic
 
     ignore_mem = args.ignore_mem
+
+    train_progress = args.train_progress
 
     r_paths = fh.process_file_args(args.responses)
     p_paths = fh.process_file_args(args.predictors)
@@ -155,6 +160,7 @@ if __name__ == '__main__':
                 "miner_train_fraction": miner_train_fraction,
                 "downsampling": downsampling,
                 "ignore_memory_warning": ignore_mem,
+                "train_progress": train_progress,
             },
         "run":
             {

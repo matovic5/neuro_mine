@@ -17,4 +17,5 @@ default_options = {
     "episodic": False,
     "downsampling": 1,
     "ignore_memory_warning": False,
+    "train_progress": False,
 }
