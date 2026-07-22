@@ -637,7 +637,7 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
 
     if mem_threshold_warn(ip_pred_data, model_history, is_episodic) and (not ignore_mem):
         print("### EXITING PROGRAM ###")
-        print("### Either reduce memory by downsampling or pass -imw flag on command line / set 'ignore memory'"
+        print("### Either reduce memory by downsampling or pass -imw flag on command line / set 'Force Run with Memory Warning'"
               " on GUI which will force the run to continue.")
         print("If multiple files were chosen as inputs, processing of other files will continue.")
         return
