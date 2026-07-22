@@ -2,7 +2,6 @@ from typing import Dict, Tuple, List, Union, Optional, Any
 import numpy as np
 import pandas as pd
 from os import path
-import os
 import h5py
 from neuro_mine.lib import file_handling as fh
 import json
@@ -557,7 +556,6 @@ def standardize_data(ip_pred_data, ip_resp_data, time_as_pred: bool, is_episodic
 def process_paired_files(resp_path: List[str], pred_path: List[str], configuration: Dict):
     start_time = datetime.datetime.now()
 
-    your_model = configuration["run"]["model_name"]
     run_shuffle = configuration["config"]["run_shuffle"]
     time_as_pred = configuration["config"]["use_time"]
     history_time = configuration["config"]["history"]
@@ -583,9 +581,7 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
     # store all output files in a sub-folder of the response file folder - for episodic data we use the first response
     # file to indicate the storage location, for non-episodic data if response files originate from different locations
     # the output folders will be placed into those locations
-    output_folder = path.join(path.split(resp_path[0])[0], f"{your_model}")
-    if not path.exists(output_folder):
-        os.makedirs(output_folder)
+    output_folder = configuration["run"]["out_dir"]
     # the names of the output files are derived from the names of the corresponding response files, or in case of
     # episodic data, from the name of the first response file
     output_file_name = path.splitext(path.split(resp_path[0])[-1])[0]

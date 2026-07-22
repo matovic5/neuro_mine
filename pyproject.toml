@@ -22,8 +22,7 @@ dependencies = [
     "tensorflow",
     "scikit-learn",
     "urllib3",
-    "psutil",
-    "pathvalidate"
+    "psutil"
 ]
 
 [project.optional-dependencies]

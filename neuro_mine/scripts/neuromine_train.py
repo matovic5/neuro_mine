@@ -2,12 +2,11 @@ import argparse
 from datetime import datetime
 from neuro_mine.lib.processing import process_paired_files
 import json
-import numpy as np
 import os
 from os import path
 import neuro_mine.lib.file_handling as fh
 from neuro_mine.lib.options import default_options
-from pathvalidate import sanitize_filename
+
 
 class MineException(Exception):
     def __init__(self, message):
@@ -17,28 +16,6 @@ class MineException(Exception):
 class ConfigException(Exception):
     def __init__(self, message):
         super().__init__(message)
-
-
-def add_common_args(ap: argparse.ArgumentParser):
-    ap.add_argument("-p", "--predictors", help="Path to CSV files of predictors or alternatively "
-                                                     "directory with predictor files.",
-                          type=str, required=True, nargs='+')
-    ap.add_argument("-r", "--responses", help="Path to CSV files of responses or alternatively "
-                                                    "directory with response files.",
-                          type=str, required=True, nargs='+')
-    ap.add_argument("-ut", "--use_time", help="If set time will be used as one predictor.",
-                          action='store_true')
-    ap.add_argument("-n", "--model_name", help="Name of model for file saving purposes.", type=str)
-    ap.add_argument("-mh", "--history", help="The length of model history in time units.",
-                          type=float, default=default_options['history'])
-    ap.add_argument("-o", "--config", help="Path to config file with run parameters.", type=str, default=None)
-    ap.add_argument("-mtf", "--miner_train_fraction", help="The fraction of data to use for training",
-                          type=float, default=default_options['miner_train_fraction'])
-    ap.add_argument("-eps", "--episodic", help="If set data is assumed to be episodic with one "
-                                                     "predictor and one response file per episode.",
-                          action="store_true")
-    ap.add_argument("-dsf", "--downsampling", help="The downsampling factor",
-                          type=int, default=default_options['downsampling'])
 
 
 if __name__ == '__main__':
@@ -51,30 +28,59 @@ if __name__ == '__main__':
     a_parser = argparse.ArgumentParser(prog="Mine",
                                        description="Uses MINE to fit and interpret CNN models that relate predictors"
                                                    "identified by one CSV file to responses identified by another.")
-    add_common_args(a_parser)
-    a_parser.add_argument("-sh", "--run_shuffle", help="If set shuffled controls will be run as well.",
-                          action='store_true')
+    # Files and directories - required no defaults
+    a_parser.add_argument("-p", "--predictors", help="Path to CSV files of predictors or alternatively "
+                                               "directory with predictor files.",
+                    type=str, required=True, nargs='+')
+    a_parser.add_argument("-r", "--responses", help="Path to CSV files of responses or alternatively "
+                                              "directory with response files.",
+                    type=str, required=True, nargs='+')
+    a_parser.add_argument("-od", "--outdir", help="Path to model output directory.", type=str, required=True)
+    a_parser.add_argument("-o", "--config", help="Path to config file with run parameters.", type=str, default=None)
+
+    # Run parameters with default values - if not set on command line will be drawn from either provided options
+    # file or default options
+    a_parser.add_argument("-mh", "--history", help="The length of model history in time units.",
+                          type=float, default=None)
+
+    a_parser.add_argument("-mtf", "--miner_train_fraction", help="The fraction of data to use for training",
+                          type=float, default=None)
+
+    a_parser.add_argument("-dsf", "--downsampling", help="The downsampling factor",
+                          type=int, default=None)
+    a_parser.add_argument("-tl", "--taylor_look", help="Determines taylor look ahead as multiplier of history",
+                          type=float, default=None)
+    a_parser.add_argument("-e", "--n_epochs", help="Number of epochs when fitting model.", type=int,
+                          default=None)
+
+    # Analysis parameters with default values - if not set on command line will be drawn from either provided options
+    # file or default options
     a_parser.add_argument("-ct", "--th_test", help="The test score threshold to "
                                                    "decide that fit was successful.",
-                          type=float, default=default_options['th_test'])
+                          type=float, default=None)
     a_parser.add_argument("-ts", "--taylor_sig", help="The significance threshold for taylor expansion.",
-                          type=float, default=default_options['taylor_sig'])
+                          type=float, default=None)
     a_parser.add_argument("-tc", "--taylor_cut", help="The variance fraction that has to be lost to"
                                                       "consider component important for fit.",
-                          type=float, default=default_options['taylor_cut'])
+                          type=float, default=None)
     a_parser.add_argument("-la", "--th_lax", help="The threshold of variance explained by the linear"
-                                                      "approximation to consider the fit linear.",
-                          type=float, default=default_options['th_lax'])
+                                                  "approximation to consider the fit linear.",
+                          type=float, default=None)
     a_parser.add_argument("-lsq", "--th_sqr", help="The threshold of variance explained by the 2nd order"
-                                                  "approximation to consider the fit 2nd order.",
-                          type=float, default=default_options['th_sqr'])
-    a_parser.add_argument("-tl", "--taylor_look", help="Determines taylor look ahead as multiplier of history",
-                          type=float, default=default_options['taylor_look'])
+                                                   "approximation to consider the fit 2nd order.",
+                          type=float, default=None)
+
+    # Various flags - these are false by default, will be set to true if indicated in options file
+    a_parser.add_argument("-ut", "--use_time", help="If set time will be used as one predictor.",
+                    action='store_true')
+    a_parser.add_argument("-eps", "--episodic", help="If set data is assumed to be episodic with one "
+                                                     "predictor and one response file per episode.",
+                          action="store_true")
+    a_parser.add_argument("-sh", "--run_shuffle", help="If set shuffled controls will be run as well.",
+                          action='store_true')
     a_parser.add_argument("-j", "--jacobian", help="Store the Jacobians (linear receptive fields) for each response.",
                           action='store_true')
-    a_parser.add_argument("-e", "--n_epochs", help="Number of epochs when fitting model.", type=int,
-                          default=default_options['n_epochs'])
-    a_parser.add_argument("-mq","--miner_quiet", help="Do not receive updates on model fitting in command line",
+    a_parser.add_argument("-mq", "--miner_quiet", help="Do not receive updates on model fitting in command line",
                           action='store_true')
     a_parser.add_argument("-imw", "--ignore_mem", help="If set, memory warning for data will be ignored "
                                                        "otherwise program will stop if memory might be insufficient.",
@@ -85,21 +91,19 @@ if __name__ == '__main__':
 
     args = a_parser.parse_args()
 
-    is_episodic = args.episodic
-
-    ignore_mem = args.ignore_mem
-
-    train_progress = args.train_progress
-
+    # Deal with path-type arguments
     r_paths = fh.process_file_args(args.responses)
     p_paths = fh.process_file_args(args.predictors)
 
     file_pairs = fh.pair_files(r_paths, p_paths)
 
-    if len(file_pairs) < 2:
-        # avoids bug in processing single files as episodic data
-        is_episodic = False
+    if not os.path.exists(args.outdir):
+        raise FileNotFoundError(f"Output directory {args.outdir} does not exist.")
+    if not os.path.isdir(args.outdir):
+        raise NotADirectoryError(f"Output directory {args.outdir} is not a directory.")
 
+    # determine whether a provided config file or the default options will form the basis of the parameters
+    # Note: Parameters set on command line will always override what is provided in config file!
     config_dict = None
     if args.config is not None:
         if not path.exists(args.config):
@@ -115,31 +119,53 @@ if __name__ == '__main__':
     else:
         # set to default options
         config_dict = default_options
+    # in case the config file of an older version was loaded, supplement with default keys where necessary:
+    for k in default_options:
+        if k not in config_dict:
+            config_dict[k] = default_options[k]
 
-    # any argument given on the command line will supersede corresponding options in the config dict
-    time_as_pred = config_dict["use_time"] if args.use_time == default_options["use_time"] else args.use_time
-    run_shuffle = config_dict["run_shuffle"] if args.run_shuffle == default_options["run_shuffle"] else args.run_shuffle
-    test_score_thresh = config_dict["th_test"] if np.isclose(args.th_test, default_options["th_test"]) else args.th_test
-    taylor_sig = config_dict["taylor_sig"] if np.isclose(args.taylor_sig, default_options["taylor_sig"]) else args.taylor_sig
-    taylor_cutoff = config_dict["taylor_cut"] if np.isclose(args.taylor_cut, default_options["taylor_cut"]) else args.taylor_cut
-    lax_thresh = config_dict["th_lax"] if np.isclose(args.th_lax, default_options["th_lax"]) else args.th_lax
-    sqr_thresh = config_dict["th_sqr"] if np.isclose(args.th_sqr, default_options["th_sqr"]) else args.th_sqr
-    history_time = config_dict["history"] if np.isclose(args.history, default_options["history"]) else args.history
-    taylor_look_fraction = config_dict["taylor_look"] if np.isclose(args.taylor_look, default_options["taylor_look"]) else args.taylor_look
-    fit_jacobian = config_dict["jacobian"] if args.jacobian == default_options["jacobian"] else args.jacobian
-    fit_epochs = config_dict["n_epochs"] if args.n_epochs == default_options["n_epochs"] else args.n_epochs
-    miner_train_fraction = config_dict["miner_train_fraction"] if args.miner_train_fraction == default_options["miner_train_fraction"] else args.miner_train_fraction
-    downsampling = config_dict["downsampling"] if args.downsampling == default_options["downsampling"] else args.downsampling
-    miner_verbose = False if args.miner_quiet else True
-
-    if args.model_name is None:
-        # set to default to file name of predictors
-        your_model = datetime.now().strftime("%B_%d_%Y_%I_%M%p")
+    # set flag values
+    if args.use_time or config_dict["use_time"]:
+        time_as_pred = True
     else:
-        your_model = args.model_name
+        time_as_pred = False
+    if args.episodic or config_dict["episodic"]:
+        is_episodic = True
+    else:
+        is_episodic = False
+    if args.run_shuffle or config_dict["run_shuffle"]:
+        run_shuffle = True
+    else:
+        run_shuffle = False
+    if args.jacobian or config_dict["jacobian"]:
+        fit_jacobian = True
+    else:
+        fit_jacobian = False
+    miner_verbose = False if args.miner_quiet else True
+    if args.ignore_mem or config_dict["ignore_memory_warning"]:
+        ignore_mem = True
+    else:
+        ignore_mem = False
+    if args.train_progress or config_dict["train_progress"]:
+        train_progress = True
+    else:
+        train_progress = False
 
-    # Restrict your_model to be a valid path name
-    your_model = sanitize_filename(your_model, replacement_text='_')
+    # set valued parameters
+    history = config_dict["history"] if args.history is None else args.history
+    miner_train_fraction = config_dict["miner_train_fraction"] if args.miner_train_fraction is None else args.miner_train_fraction
+    downsampling = config_dict["downsampling"] if args.downsampling is None else args.downsampling
+    taylor_look = config_dict["taylor_look"] if args.taylor_look is None else args.taylor_look
+    taylor_sig = config_dict["taylor_sig"] if args.taylor_sig is None else args.taylor_sig
+    n_epochs = config_dict["n_epochs"] if args.n_epochs is None else args.n_epochs
+    th_test = config_dict["th_test"] if args.th_test is None else args.th_test
+    taylor_cut = config_dict["taylor_cut"] if args.taylor_cut is None else args.taylor_cut
+    th_lax = config_dict["th_lax"] if args.th_lax is None else args.th_lax
+    th_sqr = config_dict["th_sqr"] if args.th_sqr is None else args.th_sqr
+
+    if len(file_pairs) < 2:
+        # avoids bug in processing single files as episodic data
+        is_episodic = False
 
     # set up shared part of configuration
     configuration = {
@@ -147,15 +173,15 @@ if __name__ == '__main__':
             {
                 "use_time": time_as_pred,
                 "run_shuffle": run_shuffle,
-                "th_test": test_score_thresh,
+                "th_test": th_test,
                 "taylor_sig": taylor_sig,
-                "taylor_cut": taylor_cutoff,
-                "th_lax": lax_thresh,
-                "th_sqr": sqr_thresh,
-                "history": history_time,
-                "taylor_look": taylor_look_fraction,
+                "taylor_cut": taylor_cut,
+                "th_lax": th_lax,
+                "th_sqr": th_sqr,
+                "history": history,
+                "taylor_look": taylor_look,
                 "jacobian": fit_jacobian,
-                "n_epochs": fit_epochs,
+                "n_epochs": n_epochs,
                 "miner_verbose": miner_verbose,
                 "miner_train_fraction": miner_train_fraction,
                 "downsampling": downsampling,
@@ -164,8 +190,8 @@ if __name__ == '__main__':
             },
         "run":
             {
-                "model_name": your_model,
-                "timestamp": datetime.now().now().isoformat(),
+                "outdir": args.outdir,
+                "timestamp": datetime.now().isoformat(),
             }
     }
 

@@ -158,7 +158,7 @@ if __name__ == '__main__':
     a_parser.add_argument("-eps", "--episodic", help="If set data is assumed to be episodic with one "
                                                      "predictor and one response file per episode.",
                           action="store_true")
-    a_parser.add_argument("-o", "--out_dir", help="Path of the output data folder.",
+    a_parser.add_argument("-od", "--outdir", help="Path of the output data folder.",
                           type=str, required=True)
 
     args = a_parser.parse_args()
@@ -169,10 +169,10 @@ if __name__ == '__main__':
     r_paths = fh.process_file_args(args.responses)
     p_paths = fh.process_file_args(args.predictors)
 
-    out_dir = args.out_dir
+    out_dir = args.outdir
 
     if not path.exists(out_dir) or not path.isdir(out_dir):
-        raise IOError("Output directory [-o/--out_dir] does not exist or is not a directory.")
+        raise IOError("Output directory [-o/--outdir] does not exist or is not a directory.")
 
     # the following seems redundant given the re-expansion into lists, however, it ensures consistent use
     # of the pairing logic and underlying file sorting
