@@ -15,25 +15,29 @@ import datetime
 
 
 def downsample_data(in_data: np.ndarray, in_time: np.ndarray,
-                    factor: int, is_event_data: bool) -> Tuple[np.ndarray, np.ndarray]:
+                    factor: int) -> Tuple[np.ndarray, np.ndarray]:
     """
     Downsamples data by a given factor. Overhangs will be removed
     :param in_data: The data to downsample
     :param in_time: The time of each datapoint before downsampling
     :param factor: The downsampling factor
-    :param is_event_data: If true, data is assumed to be discrete 0/1 data marking events
     :return:
         [0]: The downsampled data
         [1]: The downsampled time
     """
     assert in_data.ndim == 1
     assert in_time.size == in_data.size
+
     if factor <= 1:
         return in_data, in_time
-    # determine the function used for downsampling - in case of continuous data we can take the mean
-    # in case of spiking data we have to use max, i.e., if there is at least one spike in the down-sampled
-    # bin we call a spike. This does mean that downsampling isn't that ideal for spiking data
-    ds_fun = np.max if is_event_data else np.mean
+
+    # determine if data is likely event-data in which case we adjust our downsampling function
+    if np.all(np.logical_or(np.isclose(in_data, 0), np.isclose(in_data, 1))):
+        # in case of event data we have to use max, i.e., if there is at least one spike in the down-sampled
+        # bin we call a spike. This does mean that downsampling isn't that ideal for spiking data
+        ds_fun = np.max
+    else:
+        ds_fun = np.mean
     # remove overhang
     valid_size = (in_data.size // factor) * factor
     out_time = in_time[:valid_size][::factor]
@@ -41,23 +45,40 @@ def downsample_data(in_data: np.ndarray, in_time: np.ndarray,
     return out_data, out_time
 
 
-def downsample_mat_with_time(in_data: np.ndarray, factor: int, is_event_data: bool) -> np.ndarray:
+def downsample_mat_with_time(in_data: np.ndarray, factor: int) -> np.ndarray:
     assert in_data.ndim == 2
     in_time = in_data[:, 0]
     out_data = []
     out_time = None
     for i in range(1, in_data.shape[1]):
-        od, out_time = downsample_data(in_data[:, i], in_time, factor, is_event_data)
+        od, out_time = downsample_data(in_data[:, i], in_time, factor)
         out_data.append(od[:, None])
     out_data = np.hstack(out_data)
     return np.c_[out_time[:, None], out_data]
 
 
-def downsample_mat_list(in_list: List[np.ndarray], factor: int, is_event_data: bool) -> List[np.ndarray]:
+def downsample_mat_list(in_list: List[np.ndarray], factor: int) -> List[np.ndarray]:
     out_list = []
     for item in in_list:
-        out_list.append(downsample_mat_with_time(item, factor, is_event_data))
+        out_list.append(downsample_mat_with_time(item, factor))
     return out_list
+
+
+def safe_interp_1d(x: np.ndarray, xp: np.ndarray, fp: np.ndarray) -> np.ndarray:
+    """
+    Safely interpolates data such that 0/1 encoded event data is resampled while continuous data is linearly
+    interpolated using numpy interp
+    :param x: The interpolation timepoints
+    :param xp: The timepoints of the original data
+    :param fp: The datapoints at the original timepoints
+    :return: The interpolated data array
+    """
+    # use the same simple heuristic we use for detection of spike data to decide whether the array likely
+    # encodes events
+    if np.all(np.logical_or(np.isclose(x, 0), np.isclose(x, 1))):
+        return interp_events(x, xp, fp)
+    else:
+        return np.interp(x, xp, fp)
 
 
 def ip_time_proposal(pred_times: np.ndarray, resp_times: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -118,7 +139,7 @@ def episodic_interpolation(predictor_data: List[np.ndarray], response_data: List
         n_frames = int((max_times[i] - min_times[i]) / min_delta)
         ip_time = min_times[i] + np.arange(n_frames) * min_delta
         ip_pred_data = np.hstack(
-            [np.interp(ip_time, pred_times[i][valid_pred[i]], pda[valid_pred[i]])[:, None] for pda in predictor_data[i].T])
+            [safe_interp_1d(ip_time, pred_times[i][valid_pred[i]], pda[valid_pred[i]])[:, None] for pda in predictor_data[i].T])
         if not is_spike_data:
             ip_resp_data = np.hstack(
                 [np.interp(ip_time, resp_times[i][valid_resp[i]], rd[valid_resp[i]])[:, None] for rd in response_data[i].T])
@@ -152,7 +173,7 @@ def joint_interpolation(predictor_data: np.ndarray, response_data: np.ndarray, p
 
     # perform interpolation
     ip_pred_data = np.hstack(
-        [np.interp(ip_time, pred_times[valid_pred], pda[valid_pred])[:, None] for pda in predictor_data.T])
+        [safe_interp_1d(ip_time, pred_times[valid_pred], pda[valid_pred])[:, None] for pda in predictor_data.T])
     if not is_spike_data:
         ip_resp_data = np.hstack(
             [np.interp(ip_time, resp_times[valid_resp], rd[valid_resp])[:, None] for rd in response_data.T])
@@ -470,14 +491,14 @@ def load_and_pre_process_data(pred_path: List[str], resp_path: List[str], is_epi
     # a response file either contains all continuous data or all spiking data. When in doubt, we will treat as
     # continuous - the same is true for determination across episodes
     if not is_episodic:
-        if np.all(np.logical_or(resp_data[:, 1:]==0, resp_data[:, 1:]==1)):
+        if np.all(np.logical_or(np.isclose(resp_data[:, 1:], 0), np.isclose(resp_data[:, 1:], 1))):
             is_spike_data = True
         else:
             is_spike_data = False
     else:
         is_spike_data = True
         for rda in resp_data_list:
-            if not np.all(np.logical_or(rda==0, rda==1)):
+            if not np.all(np.logical_or(np.isclose(rda, 0), np.isclose(rda, 1))):
                 is_spike_data = False
 
     # interpolate and if requested downsample data
@@ -487,8 +508,8 @@ def load_and_pre_process_data(pred_path: List[str], resp_path: List[str], is_epi
         if ip_time.size < 2:
             raise MineException("There are less than two timepoints in the data. No model can be fit.")
         if downsampling > 1:
-            ip_pred_data = downsample_mat_with_time(ip_pred_data, downsampling, is_spike_data)
-            ip_resp_data = downsample_mat_with_time(ip_resp_data, downsampling, is_spike_data)
+            ip_pred_data = downsample_mat_with_time(ip_pred_data, downsampling)
+            ip_resp_data = downsample_mat_with_time(ip_resp_data, downsampling)
             ip_time = ip_pred_data[:, 0]
             if ip_time.size < 2:
                 raise MineException("The current downsampling factor reduces the data to less than two timepoints."
@@ -501,8 +522,8 @@ def load_and_pre_process_data(pred_path: List[str], resp_path: List[str], is_epi
             if ip_time[epix].size < 2:
                 raise MineException(f"There are less than two timepoints in episode {epix}")
         if downsampling > 1:
-            ip_pred_data = downsample_mat_list(ip_pred_data, downsampling, is_spike_data)
-            ip_resp_data = downsample_mat_list(ip_resp_data, downsampling, is_spike_data)
+            ip_pred_data = downsample_mat_list(ip_pred_data, downsampling)
+            ip_resp_data = downsample_mat_list(ip_resp_data, downsampling)
             ip_time = [ipd[:, 0] for ipd in ip_pred_data]
             for epix in range(len(ip_time)):
                 if ip_time[epix].size < 2:
