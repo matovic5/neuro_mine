@@ -15,13 +15,13 @@ import datetime
 
 
 def downsample_data(in_data: np.ndarray, in_time: np.ndarray,
-                    factor: int, is_spike_data: bool) -> Tuple[np.ndarray, np.ndarray]:
+                    factor: int, is_event_data: bool) -> Tuple[np.ndarray, np.ndarray]:
     """
     Downsamples data by a given factor. Overhangs will be removed
     :param in_data: The data to downsample
     :param in_time: The time of each datapoint before downsampling
     :param factor: The downsampling factor
-    :param is_spike_data: If true, data is assumed to be discrete 0/1 spiking data
+    :param is_event_data: If true, data is assumed to be discrete 0/1 data marking events
     :return:
         [0]: The downsampled data
         [1]: The downsampled time
@@ -33,7 +33,7 @@ def downsample_data(in_data: np.ndarray, in_time: np.ndarray,
     # determine the function used for downsampling - in case of continuous data we can take the mean
     # in case of spiking data we have to use max, i.e., if there is at least one spike in the down-sampled
     # bin we call a spike. This does mean that downsampling isn't that ideal for spiking data
-    ds_fun = np.max if is_spike_data else np.mean
+    ds_fun = np.max if is_event_data else np.mean
     # remove overhang
     valid_size = (in_data.size // factor) * factor
     out_time = in_time[:valid_size][::factor]
@@ -41,22 +41,22 @@ def downsample_data(in_data: np.ndarray, in_time: np.ndarray,
     return out_data, out_time
 
 
-def downsample_mat_with_time(in_data: np.ndarray, factor: int, is_spike_data: bool) -> np.ndarray:
+def downsample_mat_with_time(in_data: np.ndarray, factor: int, is_event_data: bool) -> np.ndarray:
     assert in_data.ndim == 2
     in_time = in_data[:, 0]
     out_data = []
     out_time = None
     for i in range(1, in_data.shape[1]):
-        od, out_time = downsample_data(in_data[:, i], in_time, factor, is_spike_data)
+        od, out_time = downsample_data(in_data[:, i], in_time, factor, is_event_data)
         out_data.append(od[:, None])
     out_data = np.hstack(out_data)
     return np.c_[out_time[:, None], out_data]
 
 
-def downsample_mat_list(in_list: List[np.ndarray], factor: int, is_spike_data: bool) -> List[np.ndarray]:
+def downsample_mat_list(in_list: List[np.ndarray], factor: int, is_event_data: bool) -> List[np.ndarray]:
     out_list = []
     for item in in_list:
-        out_list.append(downsample_mat_with_time(item, factor, is_spike_data))
+        out_list.append(downsample_mat_with_time(item, factor, is_event_data))
     return out_list
 
 
