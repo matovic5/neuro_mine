@@ -392,9 +392,9 @@ class EpisodicData:
         dset = None
         for data in self.data_objects[:self.n_train_ep]:
             if dset is None:
-                dset = data.training_data(sample_ix, batch_size)
+                dset = data.training_data(sample_ix, 1)
             else:
-                dset = dset.concatenate(data.training_data(sample_ix, batch_size))
+                dset = dset.concatenate(data.training_data(sample_ix, 1))
         dset.shuffle(_shuffle_buffer_size, reshuffle_each_iteration=True).batch(batch_size, drop_remainder=True)
         return dset.cache().prefetch(buffer_size=tf.data.AUTOTUNE)
 
@@ -412,9 +412,9 @@ class EpisodicData:
         dset = None
         for data in self.data_objects[self.n_train_ep:]:
             if dset is None:
-                dset = data.training_data(sample_ix, batch_size)
+                dset = data.training_data(sample_ix, 1)
             else:
-                dset = dset.concatenate(data.training_data(sample_ix, batch_size))
+                dset = dset.concatenate(data.training_data(sample_ix, 1))
         dset.shuffle(_shuffle_buffer_size, reshuffle_each_iteration=True).batch(batch_size, drop_remainder=True)
         return dset.cache().prefetch(buffer_size=tf.data.AUTOTUNE)
 
