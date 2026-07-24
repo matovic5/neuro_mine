@@ -382,6 +382,14 @@ class EpisodicData:
             self.n_train_ep = self.n_episodes
         self.input_steps = input_steps
 
+    @staticmethod
+    def generate_data_object(in_data: List, out_data: List, batch_size: int):
+        in_data = np.vstack(in_data)
+        out_data = np.hstack(out_data)
+        dobj = tf.data.Dataset.from_tensor_slices((in_data, out_data)). \
+            shuffle(_shuffle_buffer_size, reshuffle_each_iteration=True).batch(batch_size, drop_remainder=True)
+        return dobj.cache().prefetch(buffer_size=tf.data.AUTOTUNE)
+
     def training_data(self, sample_ix: int, batch_size=32):
         """
         Creates training data for the indicated calcium response sample (cell)
@@ -389,14 +397,12 @@ class EpisodicData:
         :param batch_size: The training batch size to use
         :return: Tensorflow dataset that can be used for training with randomization
         """
-        dset = None
+        in_data, out_data = [], []
         for data in self.data_objects[:self.n_train_ep]:
-            if dset is None:
-                dset = data.training_data(sample_ix, 1)
-            else:
-                dset = dset.concatenate(data.training_data(sample_ix, 1))
-        dset.shuffle(_shuffle_buffer_size, reshuffle_each_iteration=True).batch(batch_size, drop_remainder=True)
-        return dset.cache().prefetch(buffer_size=tf.data.AUTOTUNE)
+            ind, outd = data.training_data_arrays(sample_ix)
+            in_data.append(ind)
+            out_data.append(outd)
+        return self.generate_data_object(in_data, out_data, batch_size)
 
     def test_data(self, sample_ix: int, batch_size=32):
         """
@@ -409,14 +415,12 @@ class EpisodicData:
             raise ValueError("All data is training data")
         # Note: Since we split train/test by episode, all datasets are generated with train-fraction = 1. In the
         # following we therefore extract the test episodes but get their data by calling the training_data method
-        dset = None
+        in_data, out_data = [], []
         for data in self.data_objects[self.n_train_ep:]:
-            if dset is None:
-                dset = data.training_data(sample_ix, 1)
-            else:
-                dset = dset.concatenate(data.training_data(sample_ix, 1))
-        dset.shuffle(_shuffle_buffer_size, reshuffle_each_iteration=True).batch(batch_size, drop_remainder=True)
-        return dset.cache().prefetch(buffer_size=tf.data.AUTOTUNE)
+            ind, outd = data.training_data_arrays(sample_ix)
+            in_data.append(ind)
+            out_data.append(outd)
+        return self.generate_data_object(in_data, out_data, batch_size)
 
     def regressor_matrices(self, sample_ix: int) -> List[np.ndarray]:
         """
@@ -480,6 +484,18 @@ class Data:
         else:
             self.tsteps_for_train = ca_responses.shape[1]
 
+    def training_data_arrays(self, sample_ix: int) -> Tuple[np.ndarray, np.ndarray]:
+        out_data = self.ca_responses[sample_ix, self.input_steps - 1:self.tsteps_for_train].astype(np.float32).copy()
+        in_data = np.full((out_data.size, self.input_steps, len(self.regressors)), np.nan, dtype=np.float32)
+        for i, reg in enumerate(self.regressors):
+            if reg.shape[0] == 1:
+                this_reg = reg
+            else:
+                this_reg = reg[sample_ix, :][None, :]
+            for t in range(self.input_steps - 1, out_data.size + self.input_steps - 1):
+                in_data[t - self.input_steps + 1, :, i] = this_reg[0, t - self.input_steps + 1:t + 1]
+        return in_data, out_data
+
     def training_data(self, sample_ix: int, batch_size=32):
         """
         Creates training data for the indicated calcium response sample (cell)
@@ -487,18 +503,23 @@ class Data:
         :param batch_size: The training batch size to use
         :return: Tensorflow dataset that can be used for training with randomization
         """
-        out_data = self.ca_responses[sample_ix, self.input_steps-1:self.tsteps_for_train].astype(np.float32).copy()
-        in_data = np.full((out_data.size, self.input_steps, len(self.regressors)), np.nan, dtype=np.float32)
+        in_data, out_data = self.training_data_arrays(sample_ix)
+        train_ds = tf.data.Dataset.from_tensor_slices((in_data, out_data)).\
+            shuffle(_shuffle_buffer_size, reshuffle_each_iteration=True).batch(batch_size, drop_remainder=True)
+        return train_ds.cache().prefetch(buffer_size=tf.data.AUTOTUNE)
+
+    def test_data_arrays(self, sample_ix: int) -> Tuple[np.ndarray, np.ndarray]:
+        out_data = self.ca_responses[sample_ix, self.tsteps_for_train + self.input_steps - 1:].copy()
+        in_data = np.full((out_data.size, self.input_steps, len(self.regressors)), np.nan).astype(np.float32)
         for i, reg in enumerate(self.regressors):
             if reg.shape[0] == 1:
                 this_reg = reg
             else:
                 this_reg = reg[sample_ix, :][None, :]
-            for t in range(self.input_steps-1, out_data.size+self.input_steps-1):
-                in_data[t-self.input_steps+1, :, i] = this_reg[0, t-self.input_steps+1:t+1]
-        train_ds = tf.data.Dataset.from_tensor_slices((in_data, out_data)).\
-            shuffle(_shuffle_buffer_size, reshuffle_each_iteration=True).batch(batch_size, drop_remainder=True)
-        return train_ds.cache().prefetch(buffer_size=tf.data.AUTOTUNE)
+            for t in range(self.input_steps - 1, out_data.size + self.input_steps - 1):
+                t_t = t + self.tsteps_for_train
+                in_data[t - self.input_steps + 1, :, i] = this_reg[0, t_t - self.input_steps + 1:t_t + 1]
+        return in_data, out_data
 
     def test_data(self, sample_ix: int, batch_size=32):
         """
@@ -509,16 +530,7 @@ class Data:
         """
         if self.tsteps_for_train == self.ca_responses.shape[1]:
             raise ValueError("All data is training data")
-        out_data = self.ca_responses[sample_ix, self.tsteps_for_train+self.input_steps-1:].copy()
-        in_data = np.full((out_data.size, self.input_steps, len(self.regressors)), np.nan).astype(np.float32)
-        for i, reg in enumerate(self.regressors):
-            if reg.shape[0] == 1:
-                this_reg = reg
-            else:
-                this_reg = reg[sample_ix, :][None, :]
-            for t in range(self.input_steps-1, out_data.size+self.input_steps-1):
-                t_t = t + self.tsteps_for_train
-                in_data[t-self.input_steps+1, :, i] = this_reg[0, t_t-self.input_steps+1:t_t+1]
+        in_data, out_data = self.test_data_arrays(sample_ix)
         test_ds = tf.data.Dataset.from_tensor_slices((in_data, out_data)).batch(batch_size, drop_remainder=False)
         return test_ds.cache().prefetch(buffer_size=tf.data.AUTOTUNE)
 
