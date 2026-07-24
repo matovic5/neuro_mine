@@ -456,7 +456,7 @@ class Mine:
             if self.train_progress:
                 # Train in episode sets to obtain curves of train and test error progression
                 if outs.train_progress_data["cumulative_epochs"] is None:
-                    outs.train_progress_data["cumulative_epochs"] = np.cumsum(cum_epochs)
+                    outs.train_progress_data["cumulative_epochs"] = cum_epochs
                 train_curve = np.full(cum_epochs.size, np.nan)
                 test_curve = train_curve.copy()
                 for i, ecount in enumerate(epoch_sets):
