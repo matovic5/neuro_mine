@@ -3,7 +3,7 @@ from dateutil import parser as dateparser
 import numpy as np
 from os import path
 from datetime import datetime, date, time
-from typing import Optional, Tuple, List, Union
+from typing import Optional, Tuple, List
 import os
 
 
@@ -196,6 +196,10 @@ class CSVParser(FileParser):
 
         # remove rows that contain at leat one NaN value
         has_nan = np.sum(np.isnan(data), axis=1) > 0
+        if np.sum(has_nan) > 0:
+            print("###", flush=True)
+            print(f"Removed {np.sum(has_nan)} rows from the data since they contained at least one NaN value.", flush=True)
+            print("###", flush=True)
         data = data[np.logical_not(has_nan)]
 
         return data, data_has_header, data_header
