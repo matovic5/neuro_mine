@@ -490,16 +490,28 @@ def load_and_pre_process_data(pred_path: List[str], resp_path: List[str], is_epi
     # We use a very simple heuristic to detect spiking data and we will not allow for mixed data. In other words
     # a response file either contains all continuous data or all spiking data. When in doubt, we will treat as
     # continuous - the same is true for determination across episodes
+    # NOTE: For spike data we perform an exact comparison to 1 and 0 since deviations will mess with our loss function
+    # we warn the user, if we suspect that the data might be spiking data that suffers from floating point precision
+    # issues
     if not is_episodic:
         if np.all(np.logical_or(np.isclose(resp_data[:, 1:], 0), np.isclose(resp_data[:, 1:], 1))):
-            is_spike_data = True
+            if np.all(np.logical_or(resp_data[:, 1:] == 0, resp_data[:, 1:] == 1)):
+                is_spike_data = True
+            else:
+                print("###", flush=True)
+                print("Warning: All response data is close to 0 or 1 but not exactly 0 or 1. This might mean that "
+                      "spiking data was encoded with low floating point precision. If spiking data is desired save "
+                      "as integers.", flush=True)
+                print("###", flush=True)
+                is_spike_data = False
         else:
             is_spike_data = False
     else:
         is_spike_data = True
         for rda in resp_data_list:
-            if not np.all(np.logical_or(np.isclose(rda, 0), np.isclose(rda, 1))):
+            if not np.all(np.logical_or(rda == 0, rda == 1)):
                 is_spike_data = False
+                break
 
     # interpolate and if requested downsample data
     if not is_episodic:
