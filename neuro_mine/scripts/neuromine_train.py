@@ -187,6 +187,7 @@ if __name__ == '__main__':
                 "downsampling": downsampling,
                 "ignore_memory_warning": ignore_mem,
                 "train_progress": train_progress,
+                "episodic": is_episodic
             },
         "run":
             {

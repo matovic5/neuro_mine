@@ -605,11 +605,10 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
     downsampling = configuration["config"]["downsampling"]
     ignore_mem = configuration["config"]["ignore_memory_warning"]
     train_progress = configuration["config"]["train_progress"]
+    is_episodic = configuration["config"]["episodic"]
 
     if len(resp_path) != len(pred_path):
         raise ValueError("Episodic data needs to have the same number of predictor and response files")
-
-    is_episodic = len(resp_path) > 1
 
     # store all output files in a sub-folder of the response file folder - for episodic data we use the first response
     # file to indicate the storage location, for non-episodic data if response files originate from different locations
@@ -655,7 +654,6 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
         configuration["run"]["interpolation_time_delta"] = np.mean(np.diff(ip_time[0]))
     configuration["run"]["is_spike_data"] = is_spike_data
     configuration["run"]["n_predictors"] = len(mine_pred)
-    configuration["run"]["is_episodic"] = is_episodic
 
     # compute our "frame rate", i.e. frames per time-unit on the interpolated scale
     if not is_episodic:
