@@ -783,7 +783,7 @@ def process_paired_files(resp_path: List[str], pred_path: List[str], configurati
                 barcode = np.array(df_barcode.iloc[i]).astype(int)
                 barcode_cluster_numbers[fix] = sum([bc*(2**j) for j, bc in enumerate(barcode)])
             interpret_df.insert(interpret_df.shape[1], "Barcode cluster", barcode_cluster_numbers)
-        except AttributeError:
+        except (AttributeError, ValueError):
             warn("Did not generate barcode upset plot. Not enough fit groups.", MineWarning)
     interpret_df.to_csv(path.join(output_folder, interpret_name), index=False)
 

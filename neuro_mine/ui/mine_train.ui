@@ -490,7 +490,7 @@
    <property name="title">
     <string>Run Diagnostics</string>
    </property>
-   <widget class="QWidget" name="">
+   <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -528,7 +528,7 @@
      </item>
     </layout>
    </widget>
-   <widget class="QWidget" name="">
+   <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
       <x>110</x>
@@ -856,9 +856,9 @@
   <widget class="QWidget" name="">
    <property name="geometry">
     <rect>
-     <x>13</x>
-     <y>11</y>
-     <width>581</width>
+     <x>14</x>
+     <y>12</y>
+     <width>571</width>
      <height>35</height>
     </rect>
    </property>
@@ -873,12 +873,12 @@
       </property>
       <property name="maximumSize">
        <size>
-        <width>200</width>
+        <width>111</width>
         <height>16777215</height>
        </size>
       </property>
       <property name="text">
-       <string>Output Directory Name:</string>
+       <string>Output Directory:</string>
       </property>
      </widget>
     </item>
@@ -886,7 +886,7 @@
      <widget class="QLineEdit" name="lineEdit">
       <property name="maximumSize">
        <size>
-        <width>400</width>
+        <width>412</width>
         <height>16777215</height>
        </size>
       </property>
@@ -926,7 +926,6 @@
     </item>
    </layout>
   </widget>
-  <zorder>groupBox_7</zorder>
   <zorder>groupBox</zorder>
   <zorder>groupBox_2</zorder>
   <zorder>groupBox_3</zorder>
@@ -936,9 +935,7 @@
   <zorder>layoutWidget</zorder>
   <zorder>layoutWidget</zorder>
   <zorder>groupBox_6</zorder>
-  <zorder>lineEdit</zorder>
-  <zorder>pushButton_7</zorder>
-  <zorder></zorder>
+  <zorder>groupBox_7</zorder>
  </widget>
  <resources>
   <include location="resources.qrc"/>
