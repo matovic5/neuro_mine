@@ -270,7 +270,8 @@ class CSVParser(FileParser):
         has_nan = np.sum(np.isnan(data), axis=1) > 0
         if np.sum(has_nan) > 0:
             print("###", flush=True)
-            print(f"Removed {np.sum(has_nan)} rows from the data since they contained at least one NaN value.", flush=True)
+            print(f"Removed {np.sum(has_nan)} rows from {self.filename} since they contained at least one NaN or a missing value.", flush=True)
+            print("Note, deleting rows from within Microsoft Excel will sometimes remove data but leave ghost rows in the file. These will trigger this warning as well.")
             print("###", flush=True)
         data = data[np.logical_not(has_nan)]
 
