@@ -40,7 +40,7 @@ Data Requirements:
     - Furthermore, time encoding **must** match between predictor and response files such that predictor times can be aligned with response times
 
 .. note::
-    ️Ambiguities in the time column will lead to failures: Be mindful of rounding when saving data to CSV which can assign the same time values to successive timepoints.
+    ️Ambiguities in the time column will lead to failures; Be mindful of rounding when saving data to CSV which can assign the same time values to successive timepoints.
 
 ------------
 
@@ -51,10 +51,7 @@ Create an environment using Python v3.9:
 
 .. code-block:: bash
 
-   conda create -n mine python=3.9
-
-.. note::
-   If this step is skipped, Tensorflow>2.15.1 should not already be installed in the existing environment.
+   conda create -n mine python=3.12
 
 Activate environment
 
@@ -83,7 +80,7 @@ Possible command line arguments for fitting with Neuro-MINE
 
 .. code-block:: bash
 
-    Mine -p <predictor directory or filepath(s)> -r <response directory or filepath(s)> -ut <use time> -sh <run shuffle> -ct <test score threshold> -ts <Taylor significance> -la <linear fit variance fraction> -lsq <square fit variance fraction> -n <name of model> -mh <model history (seconds)> -tl <Taylor lookahead> -j <Store Jacobians> -o <JSON filepath with existing parameters>  -e <number of epochs> -mq <non-verbose in terminal> -mtf <fraction of data for training vs testing> -eps <data is episodic> -dsf <downsampling factor?
+    Mine -p <predictor directory or filepath(s)> -r <response directory or filepath(s)> -od <output directory> -ut <use time> -sh <run shuffle> -ct <test score threshold> -ts <Taylor significance> -la <linear fit variance fraction> -lsq <square fit variance fraction> -mh <model history (seconds)> -tl <Taylor lookahead> -tc <Taylor cutoff> -j <Store Jacobians> -o <JSON filepath with existing parameters> -e <number of epochs> -mq <non-verbose in terminal> -mtf <fraction of data for training vs testing> -eps <data is episodic> -dsf <downsampling factor> -imw <ignore memory warning and force run> -z <plot training curves>
 
 See command line prompts to customize the model
 
@@ -93,7 +90,7 @@ See command line prompts to customize the model
 
 Training GUI Explanation
 
-.. image:: _static/20260513_RTD-TrainGUI.png
+.. image:: _static/20260803_RTDDocumentation_TrainGUI.png
 
 Training Parameter Explanation
 
@@ -219,6 +216,11 @@ In addition, the underlying CNN model can be imported directly:
     # to all inputs in the neighborhood of X0
     nm.dca_dr(model, X0)
 
+To generate plots of autocorrelations of predictors and resposes, autocorrelation times, and pairwise correlations between predictors and responses, the following code can be run in the command line interface:
+
+.. code-block:: bash
+
+      Data-diagnostic -p <predictor files> -r <response files> -ut <to use time> -eps <if episodic> -o <output directory>
 
 ------------
 
