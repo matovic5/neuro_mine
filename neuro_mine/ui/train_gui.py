@@ -311,7 +311,6 @@ class Mine_App(QWidget, Ui_Form):
                 args.extend(["--ignore_mem"])
 
             self.pushButton.setEnabled(False)
-            print("#### RUN STARTED ####")
             self.p = QProcess()
             self.p.finished.connect(self.process_finished)
             self.p.readyReadStandardOutput.connect(self.handle_command_line_update)
@@ -319,7 +318,6 @@ class Mine_App(QWidget, Ui_Form):
             self.p.start(sys.executable, args)
 
     def process_finished(self):
-        print("#### RUN ENDED ####")
         self.p = None
         self.update_button_states()
 

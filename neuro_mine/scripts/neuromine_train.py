@@ -196,6 +196,9 @@ if __name__ == '__main__':
             }
     }
 
+    print()
+    print("#### RUN STARTED ####", flush=True)
+
     if not is_episodic:
         for i, pair in enumerate(file_pairs):
             # add files to config information
@@ -215,3 +218,6 @@ if __name__ == '__main__':
         configuration["run"]["response_files"] = r_files
 
         process_paired_files(r_files, p_files, configuration)
+
+    print()
+    print("#### RUN ENDED ####", flush=True)
