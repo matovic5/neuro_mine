@@ -343,7 +343,7 @@ def test_metrics_plot(mdata: Union[MineData, MineSpikingData], mdata_shuff: Unio
 
     # plot identified fractions on top, false discovery rate on bottom plot
     axes[0].plot(c_thresholds, ab_real, label="Real data")
-    axes[0].plot(c_thresholds, ab_shuff, label="Shuffled data")
+    axes[0].plot(c_thresholds, ab_shuff, label="Permuted data")
     axes[0].plot([test_score_thresh, test_score_thresh], [0, 1], 'k--', label="Threshold")
     metric_label = "ROC AUC" if is_spike_data else "Correlation"
     axes[0].set_xlabel(f"Test {metric_label} cutoff")
