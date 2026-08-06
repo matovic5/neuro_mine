@@ -184,6 +184,12 @@ Prediction GUI Explanation
 Advanced code usage examples
 ==============
 
+To install the package with a constraint file (e.g., for tested packages or Macs with Intel chips):
+
+.. code-block:: bash
+
+   pip install -c <constraint_file> -e .]
+
 All major classes and functions that make up MINE are readily importable into user code for advanced integration.
 
 Import of MINE class for direct access to fit object:
