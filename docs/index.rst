@@ -72,11 +72,11 @@ If you use this package in your research, please consider citing:
    This documentation is a work in progress. Contributions and feedback are welcome.
    
    .. toctree::
-   :maxdepth: 2
-   :caption: Contents
-   
-   use_cases
-   data_requirements
-   training_module
-   prediction_module
-   advanced_usage
+      :maxdepth: 2
+      :caption: Contents
+      
+      use_cases
+      data_requirements
+      training_module
+      prediction_module
+      advanced_usage
