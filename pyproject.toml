@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "neuro_mine"
-version = "1.0.0rc1"
+version = "1.0.0r"
 description = "Identifies the contribution of behavioural and stimulus parameters to neural activity"
 readme = "README.md"
 authors = [
