@@ -5,13 +5,16 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 import logging
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
-from .lib.processing import generate_insights, barcode_cluster_plot, generate_insights_from_file, load_and_pre_process_data, test_metrics_plot, linearity_metrics_plot
+from .lib.processing import (generate_insights, barcode_cluster_plot, generate_insights_from_file,
+                             load_and_pre_process_data, test_metrics_plot, linearity_metrics_plot, standardize_data,
+                             train_curve_plot, joint_interpolation, episodic_interpolation, safe_interp_1d)
 from .lib.mine import Mine, BaseData, MineData, MineSpikingData, MineWarning, MineException
 from .lib.taylorDecomp import dca_dr, d2ca_dr2, taylor_predict, taylor_decompose, data_mean_prediction, complexity_scores
 from .lib.model import ActivityPredictor, train_model, get_standard_model
 from .lib.utilities import (create_overwrite, modelweights_to_hdf5, modelweights_from_hdf5, bootstrap, safe_standardize,
                                 safe_standardize_episodic, barcode_cluster, rearrange_hessian, simulate_response, modified_gram_schmidt, sigmoid,
                                 interp_events, EpisodicData, Data, compute_autocorr_time)
+from .lib.file_handling import FileParser, CSVParser
 
 __all__ = ["Data",
            "EpisodicData",
@@ -48,4 +51,11 @@ __all__ = ["Data",
            "MineData",
            "MineSpikingData",
            "MineWarning",
-           "MineException"]
+           "MineException",
+           "standardize_data",
+           "train_curve_plot",
+           "joint_interpolation",
+           "episodic_interpolation",
+           "safe_interp_1d",
+           "FileParser",
+           "CSVParser"]
