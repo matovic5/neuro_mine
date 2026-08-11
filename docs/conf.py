@@ -5,7 +5,7 @@
 project = 'NeuroMINE'
 copyright = '2026, Danica Matovic, Martin Haesemeyer'
 author = 'Danica Matovic, Martin Haesemeyer'
-release = '0.9.0'
+release = '1.0.0'
 
 # -- General configuration ---------------------------------------------------
 
@@ -26,6 +26,11 @@ html_theme_options = {
     "github_url": "https://github.com/matovic5/neuro_mine",
     "navbar_end": ["theme-switcher", "navbar-icon-links"],
 }
+
+html_sidebars = {
+    "**": []
+}
+
 html_context = {
     "github_user": "matovic5",
     "github_repo": "neuro_mine",
