@@ -485,7 +485,7 @@ class Mine:
             if c_ts < self.score_cut or not np.isfinite(c_ts):
                 if self.verbose:
                     print(f"        Unit {cell_ix+1} out of {n_responses} completed. "
-                          f"Test score={outs.scores_test[cell_ix]} which was below cut-off.", flush=True)
+                          f"Test score={np.round(outs.scores_test[cell_ix], 3)} which was below cut-off.", flush=True)
                 continue
             # compute first and second order derivatives
             tset = ep_data.training_data(cell_ix, batch_size=batch_size)
@@ -563,7 +563,7 @@ class Mine:
                     outs.all_hessians[cell_ix, :, :] = hessian
             if self.verbose:
                 print(f"        Unit {cell_ix + 1} out of {n_responses} completed. "
-                      f"Test score={outs.scores_test[cell_ix]}", flush=True)
+                      f"Test score={np.round(outs.scores_test[cell_ix], 3)}", flush=True)
         if self.compute_taylor:
             # turn the taylor predictions into ndarrays unless no unit passed threshold
             if len(outs.taylor_true_change) > 0:
@@ -662,7 +662,7 @@ class Mine:
             if c_ts < self.score_cut or not np.isfinite(c_ts):
                 if self.verbose:
                     print(f"        Unit {cell_ix+1} out of {n_responses} completed. "
-                          f"Test score={outs.scores_test[cell_ix]} which was below cut-off.", flush=True)
+                          f"Test score={np.round(outs.scores_test[cell_ix], 3)} which was below cut-off.", flush=True)
                 continue
             # compute first and second order derivatives
             tset = data_obj.training_data(cell_ix, batch_size=batch_size)
@@ -723,7 +723,7 @@ class Mine:
                     outs.all_hessians[cell_ix, :, :] = hessian
             if self.verbose:
                 print(f"        Unit {cell_ix+1} out of {response_data.shape[0]} completed. "
-                      f"Test score={outs.scores_test[cell_ix]}", flush=True)
+                      f"Test score={np.round(outs.scores_test[cell_ix], 3)}", flush=True)
         if self.compute_taylor:
             # turn the taylor predictions into ndarrays unless no unit passed threshold
             if len(outs.taylor_true_change) > 0:
