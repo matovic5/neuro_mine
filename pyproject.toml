@@ -27,7 +27,7 @@ dependencies = [
 
 [project.optional-dependencies]
 docs = ["sphinx",
-        "pydata-sphinx-theme",
+        "sphinx_rtd_theme",
         "sphinx-copybutton"]
 
 [tool.setuptools]
