@@ -97,8 +97,8 @@ if __name__ == '__main__':
 
     file_pairs = fh.pair_files(r_paths, p_paths)
 
-    if not os.path.exists(args.outdir):
-        raise FileNotFoundError(f"Output directory {args.outdir} does not exist.")
+    if not path.exists(args.outdir):
+        os.makedirs(args.outdir)
     if not os.path.isdir(args.outdir):
         raise NotADirectoryError(f"Output directory {args.outdir} is not a directory.")
 
