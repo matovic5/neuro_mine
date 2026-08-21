@@ -72,7 +72,7 @@ If you use this package in your research, please consider citing:
    
 .. toctree::
    :maxdepth: 2
-   :hidden: Contents
+   :caption: Contents
 
    use_cases
    data_requirements
