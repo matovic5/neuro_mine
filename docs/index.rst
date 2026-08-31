@@ -23,9 +23,9 @@ to analyze experimental datasets containing neural activity and corresponding pr
 
 It also allows for predictions of neural responses from a previously fit model for hypothesis generation.
 
---------------
+
 Quick Start
-==============
+--------------
 
 Create conda environment:
 
@@ -45,18 +45,18 @@ Install/upgrade Neuro-MINE from PyPi
 
     pip install -U neuro_mine
 
-------
+
 Links
-======
+------
 
 - Source code: https://github.com/matovic5/neuro_mine
 - Release notes: https://github.com/matovic5/neuro_mine/releases
 - PyPI: https://pypi.org/project/neuro-mine/
 - Issue tracker: https://github.com/matovic5/neuro_mine/issues
 
--------------------
+
 About the Project
-===================
+-------------------
 
 Neuro-MINE was created for neuroscientists by neuroscientists.
 
