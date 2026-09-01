@@ -10,7 +10,8 @@ exhaustive grid search.
 For practical purposes, a grid search is likely not efficient enough and more advanced methods such as
 evolutionary algorithms will get to the best solution faster while searching a larger parameter domain.
 
-**Note**: hyper parameters should be optimized on a separate validation set that is not used for regular training/testing.
+.. note::
+    Hyper parameters should be optimized on a separate validation set that is not used for regular training/testing.
 
 Optional: Download test data
 ############################
@@ -31,8 +32,9 @@ Import necessary modules
 
 All importable objects from neuro-mine can be accessed from the top level ``neuro_mine``
 
-**Note**: ``seaborn`` is not installed during installation of ``neuro-mine`` and has to be seperately installed in the
-environment if the plotting code at the bottom is to be executed.
+.. note::
+    ``seaborn`` is not installed during installation of ``neuro-mine`` and has to be seperately installed in the
+    environment if the plotting code at the bottom is to be executed.
 
 Load and prepare data
 #####################
@@ -76,9 +78,11 @@ Define constants and hyperparameters to test
     # Since network learning starts from a set of randomly initialized weights, we want to average data across multiple fits
     n_iterations = 2
 
-**Note**: For user data the ``model_history`` parameter must be adjusted. ``model_history`` is in seconds and 50 is
-therefore a large value for most intents and purposes. It just so happens that the time in the test data is
-arbitrarily set as 1 second per timepoint.
+
+.. note::
+    For user data the ``model_history`` parameter must be adjusted. ``model_history`` is in seconds and 50 is
+    therefore a large value for most intents and purposes. It just so happens that the time in the test data is
+    arbitrarily set as 1 second per timepoint.
 
 Fit data on each point in the hyper parameter grid
 ##################################################
@@ -149,6 +153,7 @@ Example outcome on test data:
 In this example, on the test data, the highest score was achieved when training for 50 epochs (right panel) with
 a learning rate of 0.001 and an L2 penalty of 0.001, which are the current defaults.
 
-**Note**: As shown above, the learning rate and L2 penalty on the weights (weight-decay) can be set after generating the
-``Mine`` class. It is currently not possible to modify these hyper parameters when running the training or prediction
-scripts.
+.. note::
+    As shown above, the learning rate and L2 penalty on the weights (weight-decay) can be set after generating the
+    ``Mine`` class. It is currently not possible to modify these hyper parameters when running the training or prediction
+    scripts.
