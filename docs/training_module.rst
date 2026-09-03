@@ -21,7 +21,7 @@ See command line prompts to customize the model
 
 Training GUI Explanation
 
-.. image:: _static/20260803_RTDDocumentation_TrainGUI.png
+.. image:: _static/RTDDocumentation_TrainGUI.png
 
 Training Parameter Explanation
 
