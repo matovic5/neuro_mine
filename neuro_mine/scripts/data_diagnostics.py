@@ -5,6 +5,7 @@ Script to save simple data descriptors that can be helpful to tune and interpret
 import argparse
 from neuro_mine.lib.processing import load_and_pre_process_data
 import numpy as np
+import os
 from os import path
 import neuro_mine.lib.file_handling as fh
 from typing import List
@@ -171,8 +172,8 @@ if __name__ == '__main__':
 
     out_dir = args.outdir
 
-    if not path.exists(out_dir) or not path.isdir(out_dir):
-        raise IOError("Output directory [-o/--outdir] does not exist or is not a directory.")
+    if not path.exists(out_dir):
+        os.makedirs(out_dir)
 
     # the following seems redundant given the re-expansion into lists, however, it ensures consistent use
     # of the pairing logic and underlying file sorting

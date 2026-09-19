@@ -10,7 +10,8 @@ import os
 from neuro_mine.lib.options import default_options
 import sys
 
-os.system('color')
+if os.name == "nt":
+    os.system("color")
 
 class Mine_App(QWidget, Ui_Form):
     def __init__(self):
