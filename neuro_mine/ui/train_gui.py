@@ -334,7 +334,7 @@ class Mine_App(QWidget, Ui_Form):
     def message(s, error=False):
         # aggressively filter out warnings that are sent to standard error because tensorflow does not know
         # how to initialize abseil
-        if "WARNING:" in s or "XLA" in s:
+        if "WARNING:" in s or "XLA" in s or "cuda" in s or "CUDA" in s or "GPU" in s:
             return
         if error:
             print('\033[91m' + s + '\033[0m')
