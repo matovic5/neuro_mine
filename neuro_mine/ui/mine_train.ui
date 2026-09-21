@@ -488,9 +488,9 @@
     </rect>
    </property>
    <property name="title">
-    <string>Generate Diagnostics (Increase Runtime)</string>
+    <string>Generate Diagnostics (Increases Runtime)</string>
    </property>
-   <widget class="QWidget" name="">
+   <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
       <x>11</x>
