@@ -103,7 +103,7 @@ def process_episodic(p_files: List[str], r_files: List[str], output_dir: str):
     ac_times_resps.to_csv(path.join(output_dir, r_out_prefix + "_autocorr_responses.csv"))
     ip_diff = np.mean(np.diff(i_times[0]))
     fig = plot_auto_corr_times(np.array(ac_times_preds.iloc[0]), np.array(ac_times_resps.iloc[0]), ip_diff)
-    fig.savefig(path.join(output_dir, r_out_prefix + "Autocorrelation_times.pdf"))
+    fig.savefig(path.join(output_dir, r_out_prefix + "_autocorr_times.pdf"))
 
 
 
@@ -140,7 +140,7 @@ def process_single(p_file: str, r_file: str, output_dir: str):
     # generate boxplot of autocorrelation times in predictors and responses
     ip_diff = np.mean(np.diff(i_times))
     fig = plot_auto_corr_times(np.array(ac_times_preds.iloc[0]), np.array(ac_times_resps.iloc[0]), ip_diff)
-    fig.savefig(path.join(output_dir, r_out_prefix + "Autocorrelation_times.pdf"))
+    fig.savefig(path.join(output_dir, r_out_prefix + "_autocorr_times.pdf"))
 
 
 if __name__ == '__main__':
