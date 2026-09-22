@@ -1,0 +1,37 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Neuro-MINE
+message: >-
+  Analyze neuronal data and correlate it to behaviours and
+  stimuli.
+type: software
+authors:
+  - given-names: Danica
+    family-names: Matovic
+    email: matovic.5@osu.edu
+    affiliation: The Ohio State University
+    orcid: 'https://orcid.org/0009-0001-8403-5141'
+  - given-names: Martin
+    family-names: Haesemeyer
+    email: haesemeyer.1@osu.edu
+    affiliation: The Ohio State University
+    orcid: 'https://orcid.org/0000-0003-2704-3601'
+repository-code: 'https://github.com/matovic5/neuro_mine'
+abstract: >
+  The Python package Neuro-MINE combines two
+  machine-learning based modules: training and prediction.
+  The training module links experimental predictors to
+  neural activity recordings (e.g., functional imaging,
+  electrophysiology) using a convolutional neural network.
+  This allows capturing both linear and non-linear
+  relationships while key aspects of these relationships are
+  characterized using Taylor decomposition. The prediction
+  module then allows users to compute the most likely neural
+  response to hypothetical inputs, making it a powerful
+  hypothesis generator when designing experimental plans. 
+
+  For complete details on the architecture of Neuro-MINE,
+  please refer to Costabile et al. (2023).
+license: MIT
