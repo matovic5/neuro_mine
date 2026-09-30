@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>609</width>
+    <width>696</width>
     <height>727</height>
    </rect>
   </property>
@@ -29,7 +29,7 @@
     <rect>
      <x>10</x>
      <y>40</y>
-     <width>581</width>
+     <width>671</width>
      <height>261</height>
     </rect>
    </property>
@@ -54,7 +54,7 @@
      <rect>
       <x>11</x>
       <y>27</y>
-      <width>561</width>
+      <width>651</width>
       <height>231</height>
      </rect>
     </property>
@@ -113,7 +113,7 @@
     <rect>
      <x>10</x>
      <y>390</y>
-     <width>291</width>
+     <width>341</width>
      <height>151</height>
     </rect>
    </property>
@@ -125,7 +125,7 @@
      <rect>
       <x>1</x>
       <y>21</y>
-      <width>281</width>
+      <width>331</width>
       <height>124</height>
      </rect>
     </property>
@@ -296,9 +296,9 @@
   <widget class="QGroupBox" name="groupBox_3">
    <property name="geometry">
     <rect>
-     <x>320</x>
+     <x>360</x>
      <y>400</y>
-     <width>281</width>
+     <width>321</width>
      <height>151</height>
     </rect>
    </property>
@@ -310,7 +310,7 @@
      <rect>
       <x>0</x>
       <y>20</y>
-      <width>273</width>
+      <width>311</width>
       <height>124</height>
      </rect>
     </property>
@@ -483,7 +483,7 @@
     <rect>
      <x>20</x>
      <y>630</y>
-     <width>301</width>
+     <width>331</width>
      <height>41</height>
     </rect>
    </property>
@@ -495,7 +495,7 @@
      <rect>
       <x>11</x>
       <y>20</y>
-      <width>288</width>
+      <width>321</width>
       <height>23</height>
      </rect>
     </property>
@@ -560,7 +560,7 @@
     <rect>
      <x>20</x>
      <y>680</y>
-     <width>301</width>
+     <width>331</width>
      <height>41</height>
     </rect>
    </property>
@@ -572,7 +572,7 @@
      <rect>
       <x>10</x>
       <y>20</y>
-      <width>307</width>
+      <width>321</width>
       <height>23</height>
      </rect>
     </property>
@@ -649,7 +649,7 @@
     <rect>
      <x>20</x>
      <y>590</y>
-     <width>581</width>
+     <width>661</width>
      <height>33</height>
     </rect>
    </property>
@@ -677,7 +677,7 @@
     <rect>
      <x>10</x>
      <y>310</y>
-     <width>581</width>
+     <width>671</width>
      <height>80</height>
     </rect>
    </property>
@@ -689,7 +689,7 @@
      <rect>
       <x>11</x>
       <y>22</y>
-      <width>552</width>
+      <width>651</width>
       <height>54</height>
      </rect>
     </property>
@@ -785,7 +785,7 @@
     <rect>
      <x>360</x>
      <y>630</y>
-     <width>241</width>
+     <width>321</width>
      <height>91</height>
     </rect>
    </property>
@@ -797,7 +797,7 @@
      <rect>
       <x>10</x>
       <y>20</y>
-      <width>224</width>
+      <width>311</width>
       <height>23</height>
      </rect>
     </property>
@@ -821,7 +821,7 @@
    <widget class="QPushButton" name="pushButton">
     <property name="geometry">
      <rect>
-      <x>90</x>
+      <x>170</x>
       <y>50</y>
       <width>141</width>
       <height>32</height>
@@ -846,7 +846,7 @@
     <rect>
      <x>14</x>
      <y>12</y>
-     <width>571</width>
+     <width>661</width>
      <height>35</height>
     </rect>
    </property>
