@@ -535,21 +535,27 @@ class Mine:
                     pc = utilities.sigmoid(pc)
                     by_pred = utilities.sigmoid(by_pred)
                 off_diag_index = 0
-                for row in range(n_predictors):
-                    for column in range(n_predictors):
-                        if row == column:
-                            remainder = pc - by_pred[:, row, column]
-                            # Store in the first n_diag indices of taylor_by_pred (i.e. simply at row as indexer)
-                            bsample = utilities.bootstrap_fractional_r2loss(true_change, pc, remainder, 1000)
-                            outs.taylor_scores[cell_ix, row, 0] = np.mean(bsample)
-                            outs.taylor_scores[cell_ix, row, 1] = np.std(bsample)
-                        elif row < column:
-                            remainder = pc - by_pred[:, row, column] - by_pred[:, column, row]
-                            # Store in row-major order in taylor_by_pred after the first n_diag indices
-                            bsample = utilities.bootstrap_fractional_r2loss(true_change, pc, remainder, 1000)
-                            outs.taylor_scores[cell_ix, n_predictors + off_diag_index, 0] = np.mean(bsample)
-                            outs.taylor_scores[cell_ix, n_predictors + off_diag_index, 1] = np.std(bsample)
-                            off_diag_index += 1
+                # NOTE: If there is only one predictor, it trivially has to be driving the response, so we can skip
+                #   bootstrapping of the Taylor scores
+                if n_predictors == 1:
+                    outs.taylor_scores[cell_ix, 0, 0] = 1
+                    outs.taylor_scores[cell_ix, 0, 1] = 0
+                else:
+                    for row in range(n_predictors):
+                        for column in range(n_predictors):
+                            if row == column:
+                                remainder = pc - by_pred[:, row, column]
+                                # Store in the first n_diag indices of taylor_by_pred (i.e. simply at row as indexer)
+                                bsample = utilities.bootstrap_fractional_r2loss(true_change, pc, remainder, 1000)
+                                outs.taylor_scores[cell_ix, row, 0] = np.mean(bsample)
+                                outs.taylor_scores[cell_ix, row, 1] = np.std(bsample)
+                            elif row < column:
+                                remainder = pc - by_pred[:, row, column] - by_pred[:, column, row]
+                                # Store in row-major order in taylor_by_pred after the first n_diag indices
+                                bsample = utilities.bootstrap_fractional_r2loss(true_change, pc, remainder, 1000)
+                                outs.taylor_scores[cell_ix, n_predictors + off_diag_index, 0] = np.mean(bsample)
+                                outs.taylor_scores[cell_ix, n_predictors + off_diag_index, 1] = np.std(bsample)
+                                off_diag_index += 1
             if self.return_jacobians or self.return_hessians:
                 if self.return_jacobians:
                     jacobian = jacobian.numpy().ravel()
@@ -695,21 +701,27 @@ class Mine:
                     pc = utilities.sigmoid(pc)
                     by_pred = utilities.sigmoid(by_pred)
                 off_diag_index = 0
-                for row in range(n_predictors):
-                    for column in range(n_predictors):
-                        if row == column:
-                            remainder = pc - by_pred[:, row, column]
-                            # Store in the first n_diag indices of taylor_by_pred (i.e. simply at row as indexer)
-                            bsample = utilities.bootstrap_fractional_r2loss(true_change, pc, remainder, 1000)
-                            outs.taylor_scores[cell_ix, row, 0] = np.mean(bsample)
-                            outs.taylor_scores[cell_ix, row, 1] = np.std(bsample)
-                        elif row < column:
-                            remainder = pc - by_pred[:, row, column] - by_pred[:, column, row]
-                            # Store in row-major order in taylor_by_pred after the first n_diag indices
-                            bsample = utilities.bootstrap_fractional_r2loss(true_change, pc, remainder, 1000)
-                            outs.taylor_scores[cell_ix, n_predictors + off_diag_index, 0] = np.mean(bsample)
-                            outs.taylor_scores[cell_ix, n_predictors + off_diag_index, 1] = np.std(bsample)
-                            off_diag_index += 1
+                # NOTE: If there is only one predictor, it trivially has to be driving the response, so we can skip
+                #   bootstrapping of the Taylor scores
+                if n_predictors == 1:
+                    outs.taylor_scores[cell_ix, 0, 0] = 1
+                    outs.taylor_scores[cell_ix, 0, 1] = 0
+                else:
+                    for row in range(n_predictors):
+                        for column in range(n_predictors):
+                            if row == column:
+                                remainder = pc - by_pred[:, row, column]
+                                # Store in the first n_diag indices of taylor_by_pred (i.e. simply at row as indexer)
+                                bsample = utilities.bootstrap_fractional_r2loss(true_change, pc, remainder, 1000)
+                                outs.taylor_scores[cell_ix, row, 0] = np.mean(bsample)
+                                outs.taylor_scores[cell_ix, row, 1] = np.std(bsample)
+                            elif row < column:
+                                remainder = pc - by_pred[:, row, column] - by_pred[:, column, row]
+                                # Store in row-major order in taylor_by_pred after the first n_diag indices
+                                bsample = utilities.bootstrap_fractional_r2loss(true_change, pc, remainder, 1000)
+                                outs.taylor_scores[cell_ix, n_predictors + off_diag_index, 0] = np.mean(bsample)
+                                outs.taylor_scores[cell_ix, n_predictors + off_diag_index, 1] = np.std(bsample)
+                                off_diag_index += 1
             if self.return_jacobians or self.return_hessians:
                 if self.return_jacobians:
                     jacobian = jacobian.numpy().ravel()
