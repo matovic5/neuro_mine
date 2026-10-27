@@ -27,7 +27,7 @@ starting points for further analysis.
 
 *Publications:*
 
-Matovic D, Haesemeyer M. Protocol for Neuro-MINE: A machine learning pipeline for time-series neural response data analysis. STAR Protocols. 2026 Dec 18;7(4). doi: 10.1016/j.xpro.2026.104913. [https://www.cell.com/star-protocols/fulltext/S2666-1667(26)00566-6](https://doi.org/10.1016/j.xpro.2026.104913)
+Matovic D, Haesemeyer M. Protocol for Neuro-MINE: A machine learning pipeline for time-series neural response data analysis. STAR Protocols. 2026 Dec 18;7(4). doi: 10.1016/j.xpro.2026.104913. [https://doi.org/10.1016/j.xpro.2026.104913](https://doi.org/10.1016/j.xpro.2026.104913)
 
 Costabile JD, Balakrishnan KA, Schwinn S, Haesemeyer M. Model discovery to link neural activity to behavioral tasks. Elife. 2023 Jun 6;12:e83289. doi: 10.7554/eLife.83289. PMID: 37278516; PMCID: PMC10310322. [https://elifesciences.org/articles/83289](https://elifesciences.org/articles/83289)
 
