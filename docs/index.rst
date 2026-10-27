@@ -1,4 +1,4 @@
-.. _home:
+ok.. _home:
 
 =========================
 Neuro-MINE Documentation
@@ -60,12 +60,17 @@ About the Project
 
 Neuro-MINE was created for neuroscientists by neuroscientists.
 
-If you use this package in your research, please consider citing:
+If you use this package in your research, please consider citing the associated protocol:
+
+.. code-block:: text
+
+   Matovic D, Haesemeyer M. Protocol for Neuro-MINE: A machine learning pipeline for time-series neural response data analysis. STAR Protocols. 2026 Dec 18;7(4). doi: 10.1016/j.xpro.2026.104913. https://doi.org/10.1016/j.xpro.2026.104913
+
+or the original publication:
 
 .. code-block:: text
 
    Costabile JD, Balakrishnan KA, Schwinn S, Haesemeyer M. Model discovery to link neural activity to behavioral tasks. Elife. 2023 Jun 6;12:e83289. doi: 10.7554/eLife.83289. PMID: 37278516; PMCID: PMC10310322. https://elifesciences.org/articles/83289
-
 
 .. note::
    This documentation is a work in progress. Contributions and feedback are welcome.
